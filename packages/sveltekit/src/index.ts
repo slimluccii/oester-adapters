@@ -67,6 +67,7 @@ export default function oester(): Adapter {
         staticDir,
         base,
         routes: manifest.routes,
+        immutable: manifest.immutable,
         redirects: manifest.redirects,
         ...(manifest.htmlHandling ? { htmlHandling: manifest.htmlHandling } : {}),
         ...(entry ? { server: { entry, inject: [fetchModule] } } : {}),

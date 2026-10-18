@@ -15,6 +15,7 @@ describe("planManifest", () => {
         { match: "/assets/*", type: "static" },
         { match: "/*", type: "static-or-server" },
       ],
+      immutable: ["/assets/*"],
     });
   });
 
@@ -60,6 +61,7 @@ describe("planManifest", () => {
         { match: "/api/*", type: "server" },
         { match: "/*", type: "static", fallback: "_shell.html" },
       ],
+      immutable: ["/assets/*"],
     });
   });
 

@@ -48,6 +48,7 @@ export function astroManifest(input: ManifestInput) {
           },
         }
       : {}),
+    immutable: [`/${input.assetsDir.replace(/^\/+|\/+$/g, "")}/*`],
     needsServer,
   };
 }

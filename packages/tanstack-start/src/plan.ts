@@ -18,7 +18,11 @@ export type PlanInput = {
 const trim = (path: string) => path.replace(/^\/+|\/+$/g, "");
 
 /** The manifest's base and routes for a TanStack Start build. */
-export function planManifest(input: PlanInput): { base?: string; routes: Route[] } {
+export function planManifest(input: PlanInput): {
+  base?: string;
+  routes: Route[];
+  immutable?: string[];
+} {
   const remoteAssets = URL.canParse(input.publicBase);
   const publicBase = remoteAssets ? "" : trim(input.publicBase);
   const routerBasepath = trim(input.routerBasepath);
@@ -45,5 +49,10 @@ export function planManifest(input: PlanInput): { base?: string; routes: Route[]
     for (const match of input.serverPaths ?? ["/api/*"]) routes.push({ match, type: "server" });
     routes.push({ match: "/*", type: "static", fallback: trim(input.shell) });
   } else routes.push({ match: "/*", type: "static-or-server" });
-  return { ...(base ? { base } : {}), routes };
+  // Vite names every file it builds into the assets directory by its content hash.
+  return {
+    ...(base ? { base } : {}),
+    routes,
+    ...(remoteAssets ? {} : { immutable: [`/${trim(input.assetsDir)}/*`] }),
+  };
 }

@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { get } from "../../e2e/get.ts";
+import { expectStaticCaching, get } from "../../e2e/get.ts";
 
 const renderedAt = async (path: string) =>
   (await (await get(path)).text()).match(/rendered at (?:<!-- -->)?([\d:.TZ-]+)/)?.[1];
@@ -89,4 +89,8 @@ describe("pages rendered on request", () => {
     expect(response.status).toBe(404);
     expect(await response.text()).toContain("No such page");
   });
+});
+
+test("hashed assets are cached for a year, and pages revalidate by their etag", async () => {
+  await expectStaticCaching("/docs/about", /\/docs\/assets\/[^"\s]+\.js/);
 });

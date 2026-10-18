@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { get } from "../../e2e/get.ts";
+import { expectStaticCaching, get } from "../../e2e/get.ts";
 
 const text = async (path: string, init?: RequestInit) => (await get(path, init)).text();
 
@@ -136,4 +136,8 @@ describe("server routes", () => {
     const blog = await get("/blog/a/b");
     expect([blog.status, blog.headers.get("location")]).toEqual([307, "/posts/a/b"]);
   });
+});
+
+test("hashed assets are cached for a year, and pages revalidate by their etag", async () => {
+  await expectStaticCaching("/", /\/_nuxt\/[^"\s]+\.js/);
 });

@@ -3,6 +3,7 @@ import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { nodeBuiltins, outputDirectory, writeOutput, type Route } from "@oester/build-output";
 import { edgeCacheRule } from "./edge-cache.ts";
+import { immutablePatterns } from "./immutable.ts";
 import { nuxtRouteRules } from "./route-rules.ts";
 
 type Nitro = {
@@ -12,6 +13,7 @@ type Nitro = {
     static: boolean;
     framework: { name?: string; version?: string };
     output: { publicDir: string; serverDir: string };
+    publicAssets: Parameters<typeof immutablePatterns>[0];
     routeRules: Record<string, Parameters<typeof edgeCacheRule>[0]>;
   };
   logger: { info(message: string): void; warn(message: string): void };
@@ -47,6 +49,7 @@ async function emit(nitro: Nitro): Promise<void> {
       : {}),
     redirects,
     headers,
+    immutable: immutablePatterns(options.publicAssets),
     ...(options.static ? {} : { server: { entry: join(options.output.serverDir, "index.mjs") } }),
   });
   for (const warning of warnings) nitro.logger.warn(warning);

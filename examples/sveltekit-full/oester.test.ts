@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { get, live } from "../../e2e/get.ts";
+import { expectStaticCaching, get, live } from "../../e2e/get.ts";
 
 // The handle hook marks every response SvelteKit's server produced; static files never carry it.
 const fromServer = (response: Response) => response.headers.get("x-handled-by") === "hooks.server";
@@ -345,4 +345,8 @@ describe("form actions", () => {
     );
     expect(response.status).toBe(403);
   });
+});
+
+test("hashed assets are cached for a year, and pages revalidate by their etag", async () => {
+  await expectStaticCaching("/", /\/_app\/immutable\/[^"\s]+\.js/);
 });

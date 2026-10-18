@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { get } from "../../e2e/get.ts";
+import { expectStaticCaching, get } from "../../e2e/get.ts";
 
 // Oester serves every site over https, so a browser on it sends an https origin.
 const origin = `https://${new URL(process.env.OESTER_URL!).host}`;
@@ -203,4 +203,8 @@ describe("routing", () => {
     expect(res.status).toBe(404);
     expect(await res.text()).toContain("astro-server not found");
   });
+});
+
+test("hashed assets are cached for a year, and pages revalidate by their etag", async () => {
+  await expectStaticCaching("/", /\/_astro\/[^"\s]+\.js/);
 });

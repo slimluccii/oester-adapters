@@ -36,6 +36,11 @@ describe("routes", () => {
     }
   });
 
+  test("hashed assets never change under their name, with or without a server", () => {
+    expect(oesterManifest(build()).immutable).toEqual(["/_app/immutable/*"]);
+    expect(oesterManifest(build({ appDir: "assets" })).immutable).toEqual(["/assets/immutable/*"]);
+  });
+
   test("hashed assets stay static under a custom app directory", () => {
     const result = oesterManifest(
       build({ appDir: "assets", routes: [{ id: "/", prerender: false }] }),

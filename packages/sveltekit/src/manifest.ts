@@ -16,6 +16,7 @@ export type SvelteKitBuild = {
 export type OesterManifest = {
   server: boolean;
   routes: Route[];
+  immutable: string[];
   redirects: Redirect[];
   htmlHandling?: HtmlHandling;
   warnings: string[];
@@ -47,7 +48,14 @@ export function oesterManifest(build: SvelteKitBuild): OesterManifest {
     redirects.push({ source, destination: location, status: status as Redirect["status"] });
   }
 
-  return { server, routes, redirects, ...(htmlHandling ? { htmlHandling } : {}), warnings };
+  return {
+    server,
+    routes,
+    immutable: [`/${build.appDir}/immutable/*`],
+    redirects,
+    ...(htmlHandling ? { htmlHandling } : {}),
+    warnings,
+  };
 }
 
 // SvelteKit's trailingSlash is a page option, so it is read back from how the pages were written.

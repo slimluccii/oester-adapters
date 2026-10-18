@@ -78,6 +78,10 @@ describe("astroManifest", () => {
     expect(manifest.needsServer).toBe(true);
   });
 
+  test("Astro's built assets are hashed, so they never change under their name", () => {
+    expect(astroManifest(input({ assetsDir: "assets" })).immutable).toEqual(["/assets/*"]);
+  });
+
   test("classic middleware adds no middleware to the manifest", () => {
     expect(astroManifest(input({ routes: [page(false)] })).middleware).toBeUndefined();
   });
