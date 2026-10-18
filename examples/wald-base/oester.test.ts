@@ -8,12 +8,12 @@ describe("wald-base on Oester", () => {
     expect(response.headers.get("location")).toMatch(/\/docs\/$/);
   });
 
-  it("serves the home page at the base, with and without its slash", async () => {
-    for (const path of ["/docs/", "/docs"]) {
-      const response = await get(path);
-      expect(response.status, path).toBe(200);
-      expect(await response.text()).toContain("<title>Hello Wald</title>");
-    }
+  it("serves the home page at the base, and redirects the base without its slash there", async () => {
+    const response = await get("/docs/");
+    expect(response.status).toBe(200);
+    expect(await response.text()).toContain("<title>Hello Wald</title>");
+    const bare = await get("/docs");
+    expect([bare.status, bare.headers.get("location")]).toEqual([308, "/docs/"]);
   });
 
   it("serves pages and assets below the base", async () => {

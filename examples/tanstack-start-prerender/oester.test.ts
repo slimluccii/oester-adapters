@@ -25,7 +25,9 @@ describe("base", () => {
 
 describe("prerendered pages", () => {
   test("are served as static files, with and without a trailing slash", async () => {
-    for (const path of ["/docs", "/docs/", "/docs/about", "/docs/about/"]) {
+    const bare = await get("/docs");
+    expect([bare.status, bare.headers.get("location")]).toEqual([308, "/docs/"]);
+    for (const path of ["/docs/", "/docs/about", "/docs/about/"]) {
       const response = await get(path);
       expect(response.status).toBe(200);
       expect(response.headers.get("cache-control")).not.toBe("no-store");
