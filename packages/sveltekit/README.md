@@ -51,7 +51,7 @@ declare global {
 export {};
 ```
 
-`getClientAddress()` returns `ctx.oester.clientAddress`. `read()` from `$app/server` and server-side `fetch` of the app's own static files and prerendered pages are answered from the deployment through `env.ASSETS`, without a request over the network. `instrumentation.server.ts` runs before the app.
+`getClientAddress()` returns `ctx.oester.clientAddress`. `read()` from `$app/server` and server-side `fetch` of the app's own static files and prerendered pages are answered from the deployment, without a request over the network: `read()` through `env.ASSETS`, `fetch` by Oester itself. `instrumentation.server.ts` runs before the app.
 
 ## Limits
 

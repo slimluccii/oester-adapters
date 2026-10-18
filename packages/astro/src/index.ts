@@ -111,8 +111,6 @@ export default function oester(options: Options = {}): AstroIntegration {
     hooks: {
       "astro:config:setup": ({ updateConfig, config: initial }) => {
         updateConfig({ integrations: [output] });
-        if (!initial.image.endpoint.entrypoint)
-          updateConfig({ image: { endpoint: { entrypoint: "@oester/astro/image-endpoint" } } });
         // Sharp needs native bindings the edge does not have: it optimizes images at build, and the edge serves them as they are.
         const service = initial.image.service;
         const runtimeService = "runtime" in service ? service.runtime : service;

@@ -24,11 +24,7 @@
       "types": "./dist/runtime/cache.d.ts",
       "default": "./dist/runtime/cache.js"
     },
-    "./package.json": "./package.json",
-    "./image-endpoint": {
-      "types": "./dist/runtime/image-endpoint.d.ts",
-      "default": "./dist/runtime/image-endpoint.js"
-    }
+    "./package.json": "./package.json"
   },
   "files": [
     "dist",
@@ -45,8 +41,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@oester/build-output": "workspace:^",
-    "@astrojs/internal-helpers": "^0.13.0"
+    "@oester/build-output": "workspace:^"
   },
   "peerDependencies": {
     "astro": "^7.4.0"

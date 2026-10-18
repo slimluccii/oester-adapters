@@ -9,7 +9,6 @@ import { oesterManifest } from "./manifest.ts";
 export type { Context, Env, Platform } from "./handler.ts";
 
 const handler = fileURLToPath(new URL("./handler.js", import.meta.url));
-const fetchModule = fileURLToPath(new URL("./fetch.js", import.meta.url));
 
 /** Writes the Oester build output to `.oester/output`. */
 export default function oester(): Adapter {
@@ -70,7 +69,7 @@ export default function oester(): Adapter {
         immutable: manifest.immutable,
         redirects: manifest.redirects,
         ...(manifest.htmlHandling ? { htmlHandling: manifest.htmlHandling } : {}),
-        ...(entry ? { server: { entry, inject: [fetchModule] } } : {}),
+        ...(entry ? { server: { entry } } : {}),
       });
       for (const warning of warnings) builder.log.warn(warning);
       builder.log.minor(`Wrote ${outputDirectory}`);

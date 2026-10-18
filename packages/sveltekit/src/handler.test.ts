@@ -1,6 +1,5 @@
 import type { Server, ServerInitOptions } from "@sveltejs/kit";
 import { expect, test, vi } from "vitest";
-import { fetch } from "./fetch.ts";
 import { createHandler, type Context, type Env } from "./handler.ts";
 
 type Respond = Server["respond"];
@@ -53,17 +52,6 @@ test("a request reaches SvelteKit with the visitor's address and the platform", 
     platform: { env, ctx },
     url: "https://example.com/docs/x?y=1",
   });
-});
-
-test("while SvelteKit answers, fetching the deployment's own static files goes through env.ASSETS", async () => {
-  const { server } = fakeServer(() => fetch("https://example.com/robots.txt"));
-  const env = { ASSETS: assets({ "/robots.txt": "User-agent: *" }) };
-  const response = await createHandler(server, { base: "" }).fetch(
-    new Request("https://example.com/page"),
-    env,
-    context(),
-  );
-  expect(await response.text()).toBe("User-agent: *");
 });
 
 test("asking for the visitor's address when Oester has none is an error", async () => {

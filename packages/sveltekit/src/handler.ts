@@ -1,5 +1,4 @@
 import type { Server } from "@sveltejs/kit";
-import { withAssets } from "./fetch.ts";
 
 /** The handler's `env`: the deployment's variables as strings, and `ASSETS` to read its static files. */
 export type Env = {
@@ -37,16 +36,13 @@ export function createHandler(server: Server, config: HandlerConfig) {
   return {
     async fetch(request: Request, env: Env, ctx: Context): Promise<Response> {
       await (started ??= start(env));
-      const scope = { origin: new URL(request.url).origin, assets: env.ASSETS };
-      return withAssets(scope, () =>
-        server.respond(request, {
-          getClientAddress() {
-            if (ctx.oester.clientAddress) return ctx.oester.clientAddress;
-            throw new Error("Oester did not pass the client address of this request");
-          },
-          platform: { env, ctx } satisfies Platform,
-        }),
-      );
+      return server.respond(request, {
+        getClientAddress() {
+          if (ctx.oester.clientAddress) return ctx.oester.clientAddress;
+          throw new Error("Oester did not pass the client address of this request");
+        },
+        platform: { env, ctx } satisfies Platform,
+      });
     },
   };
 }
