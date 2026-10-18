@@ -35,7 +35,7 @@ describe("a static Astro site under a base, with trailing slashes always", () =>
   });
 
   test("a public file under the base", async () => {
-    expect(await text("/docs/style.css")).toBe("h1 { color: teal; }\n");
+    expect(await text("/docs/style.css")).toBe("h1 {\n  color: teal;\n}\n");
   });
 
   test("redirects under the base, with their own statuses, with or without a trailing slash", async () => {
