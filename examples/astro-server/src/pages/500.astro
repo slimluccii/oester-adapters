@@ -1,0 +1,5 @@
+---
+import Layout from "../components/Layout.astro";
+const { error } = Astro.props;
+---
+<Layout title="Error"><h1>astro-server error: {error instanceof Error ? error.message : "unknown"}</h1></Layout>

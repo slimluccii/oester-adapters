@@ -1,0 +1,12 @@
+{
+  "name": "example-astro-edge",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "astro build"
+  },
+  "dependencies": {
+    "@oester/astro": "workspace:*",
+    "astro": "7.4.0"
+  }
+}

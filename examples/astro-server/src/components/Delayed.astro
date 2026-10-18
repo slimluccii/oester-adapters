@@ -1,0 +1,5 @@
+---
+const { ms, label } = Astro.props;
+await new Promise((resolve) => setTimeout(resolve, ms));
+---
+<p>{label}</p>

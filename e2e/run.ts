@@ -72,6 +72,11 @@ async function preview(name: string): Promise<{ url: string; stop: () => void }>
   throw new Error(`the preview of ${name} did not start`);
 }
 
+if (!live && spawnSync("pnpm", ["run", "build"], { cwd: root, stdio: "inherit" }).status !== 0) {
+  console.error("Building the packages failed");
+  process.exit(1);
+}
+
 const failed: string[] = [];
 for (const name of names) {
   console.log(`\n== ${name}`);

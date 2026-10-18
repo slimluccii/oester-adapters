@@ -1,0 +1,10 @@
+---
+import { actions } from "astro:actions";
+const result = Astro.getActionResult(actions.greet);
+---
+<form method="POST" action={actions.greet}>
+  <input name="name" />
+  <button>Greet</button>
+</form>
+{result && !result.error && <p id="greeting">{result.data.greeting}</p>}
+{result?.error && <p id="error">{result.error.code}</p>}

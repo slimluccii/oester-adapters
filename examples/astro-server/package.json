@@ -1,0 +1,21 @@
+{
+  "name": "example-astro-server",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "astro build"
+  },
+  "dependencies": {
+    "@astrojs/preact": "6.1.0",
+    "@oester/astro": "workspace:*",
+    "astro": "7.4.0",
+    "preact": "11.0.1",
+    "sharp": "0.35.5"
+  },
+  "oester": {
+    "variables": {
+      "SECRET_TOKEN": "s3cret",
+      "PUBLIC_GREETING": "hallo"
+    }
+  }
+}

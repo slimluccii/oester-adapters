@@ -1,0 +1,7 @@
+---
+import Slow from "../components/Slow.astro";
+---
+<h1>island page</h1>
+<Slow server:defer>
+  <p slot="fallback">loading island</p>
+</Slow>

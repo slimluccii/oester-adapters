@@ -1,0 +1,14 @@
+---
+import { getSecret, SECRET_TOKEN } from "astro:env/server";
+import { PUBLIC_GREETING } from "astro:env/client";
+import Layout from "../components/Layout.astro";
+const url = Astro.url;
+---
+<Layout title="SSR">
+  <p id="path">path={url.pathname} q={url.searchParams.get("q")}</p>
+  <p id="secret">secret={SECRET_TOKEN} getSecret={getSecret("SECRET_TOKEN")}</p>
+  <p id="public">public={PUBLIC_GREETING}</p>
+  <p id="host">host={url.host} protocol={url.protocol}</p>
+  <p id="client">client={Astro.clientAddress ? "known" : "unknown"}</p>
+  <p id="locals">request={Astro.locals.requestId ? "has id" : "no id"}</p>
+</Layout>

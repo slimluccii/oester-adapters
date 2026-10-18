@@ -1,0 +1,6 @@
+---
+const visits = Number(Astro.cookies.get("visits")?.value ?? 0) + 1;
+Astro.cookies.set("visits", String(visits), { path: "/", httpOnly: true, sameSite: "lax" });
+Astro.response.headers.set("cache-control", "public, s-maxage=60");
+---
+<p>visits={visits}</p>

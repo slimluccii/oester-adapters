@@ -1,0 +1,57 @@
+{
+  "name": "@oester/astro",
+  "description": "Astro adapter that writes the Oester build output",
+  "version": "0.0.0",
+  "license": "MIT",
+  "keywords": [
+    "astro-adapter",
+    "astro-integration",
+    "withastro",
+    "oester"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/slimluccii/oester-adapters.git",
+    "directory": "packages/astro"
+  },
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./cache": {
+      "types": "./dist/runtime/cache.d.ts",
+      "default": "./dist/runtime/cache.js"
+    },
+    "./package.json": "./package.json",
+    "./image-endpoint": {
+      "types": "./dist/runtime/image-endpoint.d.ts",
+      "default": "./dist/runtime/image-endpoint.js"
+    }
+  },
+  "files": [
+    "dist",
+    "!dist/**/*.test.*"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "scripts": {
+    "build": "rm -rf dist && tsc -p tsconfig.build.json",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@oester/build-output": "workspace:^",
+    "@astrojs/internal-helpers": "^0.13.0"
+  },
+  "peerDependencies": {
+    "astro": "^7.0.0"
+  },
+  "devDependencies": {
+    "astro": "7.4.0"
+  }
+}

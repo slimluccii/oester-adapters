@@ -1,0 +1,12 @@
+---
+import { Image } from "astro:assets";
+import Counter from "../components/Counter.tsx";
+import Layout from "../components/Layout.astro";
+import oyster from "../assets/oyster.png";
+export const prerender = true;
+---
+<Layout title="Home">
+  <h1>astro-server home</h1>
+  <Image src={oyster} alt="An oyster" width={32} />
+  <Counter client:load />
+</Layout>
