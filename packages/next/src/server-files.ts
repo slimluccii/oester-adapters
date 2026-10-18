@@ -16,6 +16,11 @@ const textExtensions = new Set([
 ]);
 const scriptExtensions = new Set([".js", ".cjs", ".mjs"]);
 
+/** Whether a file is machine code for a native addon, which the edge cannot load. */
+export function isNativeCode(path: string): boolean {
+  return /\.(node|dylib|dll|exe)$|\.so(\.\d+)*$/.test(path);
+}
+
 const packageTypes = new Map<string, Promise<string | undefined>>();
 
 /** The `type` of the package a file belongs to, from the nearest package.json on disk. */
@@ -38,7 +43,7 @@ function packageType(directory: string): Promise<string | undefined> {
  */
 export async function serverFile(path: string, virtual: string): Promise<FileContent | undefined> {
   const extension = extname(path);
-  if (extension === ".map" || extension === ".node" || path.endsWith(".d.ts")) return undefined;
+  if (extension === ".map" || isNativeCode(path) || path.endsWith(".d.ts")) return undefined;
   if (scriptExtensions.has(extension)) {
     const source = await readFile(path, "utf8");
     const esm =

@@ -12,7 +12,7 @@ import {
   withTrailingSlashes,
 } from "./routing.ts";
 import type { Entry, ServerConfig } from "./runtime/server.ts";
-import { filesBelow, isDirectory, serverFile } from "./server-files.ts";
+import { filesBelow, isDirectory, isNativeCode, serverFile } from "./server-files.ts";
 import { staticTarget } from "./static-files.ts";
 
 type BuildContext = Parameters<NonNullable<NextAdapter["onBuildComplete"]>>[0];
@@ -166,7 +166,7 @@ async function onBuildComplete(ctx: BuildContext): Promise<void> {
       if (!contents.has(virtual)) {
         const content = await serverFile(file, virtual);
         if (content === undefined) {
-          if (file.endsWith(".node")) skipped.add(virtual);
+          if (isNativeCode(file)) skipped.add(virtual);
           continue;
         }
         contents.set(virtual, content);
@@ -175,8 +175,10 @@ async function onBuildComplete(ctx: BuildContext): Promise<void> {
     }
     virtualFiles.push({ id, files: list });
   }
-  for (const file of skipped)
-    warn(`${file} is a native addon, which the edge cannot load; it is left out`);
+  if (skipped.size)
+    warn(
+      `Native code is left out, since the edge cannot load it; a route that needs it fails when it runs:\n  ${[...skipped].join("\n  ")}`,
+    );
 
   const { parts, partsOf } = groupParts(virtualFiles);
   for (const [index, part] of parts.entries()) {
