@@ -1,0 +1,27 @@
+{
+  "name": "tanstack-start-full",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "vite build"
+  },
+  "dependencies": {
+    "@tanstack/react-router": "1.170.45",
+    "@tanstack/react-start": "1.169.3",
+    "react": "19.3.1",
+    "react-dom": "19.3.1"
+  },
+  "devDependencies": {
+    "@oester/tanstack-start": "workspace:*",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "@vitejs/plugin-react": "6.1.2",
+    "vite": "8.3.4"
+  },
+  "oester": {
+    "variables": {
+      "GREETING": "Hallo Oester",
+      "SECRET": "s3cret"
+    }
+  }
+}
