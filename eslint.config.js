@@ -11,6 +11,7 @@ export default defineConfig(
       "**/.nuxt",
       "**/.output",
       "**/routeTree.gen.ts",
+      "**/.svelte-kit",
     ],
   },
   js.configs.recommended,
