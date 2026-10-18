@@ -73,6 +73,21 @@ describe("bundleServer", () => {
     expect(await readFile(join(outDir, "index.mjs"), "utf8")).not.toMatch(/node:fs/);
   });
 
+  test("an adapter can give the server code a module of its own in place of a global", async () => {
+    const root = await sources({
+      "entry.mjs": `export default { fetch: () => fetch("https://example.com/") };\n`,
+      "fetch.mjs": `export const fetch = (input) => Promise.resolve(new Response("injected " + input));\n`,
+    });
+    const outDir = join(root, "out");
+    await bundleServer({
+      entry: join(root, "entry.mjs"),
+      outDir,
+      inject: [join(root, "fetch.mjs")],
+    });
+    const { default: handler } = await import(join(outDir, "index.mjs"));
+    expect(await (await handler.fetch()).text()).toBe("injected https://example.com/");
+  });
+
   test("the build's environment conditions pick the package's edge export", async () => {
     const root = await sources({
       "entry.mjs": `import which from "dual";\nexport default { fetch: () => new Response(which) };\n`,

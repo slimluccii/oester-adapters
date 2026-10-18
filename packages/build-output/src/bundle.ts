@@ -12,6 +12,8 @@ export type BundleOptions = {
   /** Package export conditions, before the defaults `workerd`, `worker`, `edge-light` and `import`. */
   conditions?: string[];
   define?: Record<string, string>;
+  /** Modules whose exports stand in for globals of the same name in the server code, such as `fetch`. */
+  inject?: string[];
 };
 
 const allBuiltins = new Set([
@@ -107,6 +109,7 @@ export async function bundleServer(options: BundleOptions): Promise<{ warnings: 
     mainFields: ["module", "main"],
     conditions: [...(options.conditions ?? []), "workerd", "worker", "edge-light", "import"],
     define: { "process.env.NODE_ENV": '"production"', ...options.define },
+    inject: options.inject ?? [],
     logLevel: "silent",
     plugins: [builtins(alias)],
   }).catch((error: { errors?: { text: string }[]; message: string }) => {
