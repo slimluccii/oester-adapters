@@ -81,22 +81,29 @@ async function onBuildComplete(ctx: BuildContext): Promise<void> {
     prerenderedFiles.set(parent.filePath, list);
   }
 
-  const edge = server.filter((o) => o.runtime === "edge");
-  if (edge.length)
-    throw new Error(
-      `Oester runs Next.js's Node.js runtime; these routes use the edge runtime: ${edge.map((o) => o.pathname).join(", ")}`,
-    );
-
   const entries: Record<string, Entry> = {};
   const pathnames: ServerConfig["pathnames"] = {};
   const filesOf = new Map<string, Set<string>>();
-  function addEntry(output: Output | NonNullable<BuildContext["outputs"]["middleware"]>): string {
+  function addEntry(output: Output | NonNullable<Outputs["middleware"]>): string {
     const id = virtualPath(output.filePath, repoRoot);
-    entries[id] ??= { runtime: "nodejs", id, file: id };
     const files = filesOf.get(id) ?? new Set([output.filePath]);
     for (const asset of Object.values(output.assets)) files.add(asset);
     for (const file of prerenderedFiles.get(output.filePath) ?? []) files.add(file);
     filesOf.set(id, files);
+    if (output.runtime === "edge") {
+      const wasm = Object.entries(output.wasmAssets ?? {});
+      for (const [, file] of wasm) files.add(file);
+      entries[id] ??= {
+        runtime: "edge",
+        id,
+        files: [...files].map((file) => virtualPath(file, repoRoot)),
+        entry: virtualPath(output.edgeRuntime?.modulePath ?? output.filePath, repoRoot),
+        entryKey: output.edgeRuntime?.entryKey ?? `middleware_${output.sourcePage}`,
+        handlerExport: output.edgeRuntime?.handlerExport,
+        env: output.config.env ?? {},
+        wasm: Object.fromEntries(wasm.map(([name, file]) => [name, virtualPath(file, repoRoot)])),
+      };
+    } else entries[id] ??= { runtime: "nodejs", id, file: id };
     return id;
   }
   for (const output of server) pathnames[output.pathname] = { entry: addEntry(output) };
@@ -107,19 +114,16 @@ async function onBuildComplete(ctx: BuildContext): Promise<void> {
     if (parent) pathnames[prerender.pathname] ??= pathnames[parent.pathname]!;
   }
 
-  let middleware: string | undefined;
-  if (outputs.middleware) {
-    if (outputs.middleware.runtime === "edge")
-      throw new Error(
-        "Oester runs Next.js's Node.js runtime; middleware.ts uses the edge runtime. Rename it to proxy.ts, which runs on Node.js.",
-      );
-    middleware = addEntry(outputs.middleware);
-  }
+  const middleware = outputs.middleware && addEntry(outputs.middleware);
 
-  const notFoundOutput =
-    outputs.appPages.find((o) => o.pathname === `${basePath}/_not-found`) ??
-    outputs.pages.find((o) => o.pathname === `${basePath}/_error`);
-  const notFound = notFoundOutput && virtualPath(notFoundOutput.filePath, repoRoot);
+  const appNotFound = outputs.appPages.find((o) => o.pathname === `${basePath}/_not-found`);
+  const static404 = staticFiles.find((f) => f.pathname === `${basePath}/404`);
+  const errorPage = outputs.pages.find((o) => o.pathname === `${basePath}/_error`);
+  const notFound: ServerConfig["notFound"] = appNotFound
+    ? { entry: virtualPath(appNotFound.filePath, repoRoot) }
+    : static404
+      ? { file: static404.pathname }
+      : errorPage && { entry: virtualPath(errorPage.filePath, repoRoot) };
 
   // The virtual file system: every traced file once, symbolic links as links, grouped into parts per entry.
   const links: Record<string, string> = {};

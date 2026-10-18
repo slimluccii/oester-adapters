@@ -3,14 +3,14 @@ import process from "node:process";
 import { clearImmediate, setImmediate } from "node:timers";
 import routing, { type ResolveRoutesParams } from "@next/routing";
 import { builtins } from "./builtins.ts";
+import { loadEdgeEntry, type EdgeEntry, type EdgeHandler } from "./edge.ts";
 import { createModules, type FileContent } from "./modules.ts";
 import { NodeResponse, nodeRequest } from "./node-http.ts";
 import { onOrigin } from "./urls.ts";
 
-/** An entry Next.js built: a Node.js module exporting `handler`, or an edge entry registered under `entryKey`. */
+/** An entry Next.js built: a Node.js module exporting `handler`, or scripts for its edge runtime. */
 export type Entry =
-  | { runtime: "nodejs"; id: string; file: string }
-  | { runtime: "edge"; id: string; files: string[]; entryKey: string; env: Record<string, string> };
+  { runtime: "nodejs"; id: string; file: string } | ({ runtime: "edge"; id: string } & EdgeEntry);
 
 /** What the build hands the server: the routing Next.js resolved and where each output's code is. */
 export type ServerConfig = {
@@ -26,7 +26,8 @@ export type ServerConfig = {
   pathnames: Record<string, { entry: string } | { file: true }>;
   entries: Record<string, Entry>;
   middleware?: string;
-  notFound?: string;
+  /** What answers a path no route matches: an entry rendering the not-found page, or the static 404 page. */
+  notFound?: { entry: string } | { file: string };
   /** The parts each entry's files are in. */
   partsOf: Record<string, number[]>;
 };
@@ -70,34 +71,95 @@ export function createServer(config: ServerConfig, parts: Part[]) {
   }
 
   let environment = false;
-  async function entryModule(id: string): Promise<Record<string, unknown>> {
+  const edgeHandlers = new Map<string, Promise<EdgeHandler>>();
+  async function entryModule(id: string): Promise<{ handler: unknown }> {
     const entry = config.entries[id]!;
     await Promise.all((config.partsOf[id] ?? []).map(loadPart));
-    if (entry.runtime === "nodejs") {
-      // What `next start` sets up before any entry loads: AsyncLocalStorage on globalThis, among others.
-      if (!environment) {
-        modules.require("next/dist/build/adapter/setup-node-env.external");
-        environment = true;
+    if (entry.runtime === "edge") {
+      let handler = edgeHandlers.get(id);
+      if (!handler) {
+        handler = loadEdgeEntry(entry, {
+          read: modules.read,
+          bytes: modules.bytes,
+          builtins,
+          process,
+        });
+        edgeHandlers.set(id, handler);
+        handler.catch(() => edgeHandlers.delete(id));
       }
-      return modules.require(entry.file) as Record<string, unknown>;
+      return { handler: await handler };
     }
-    throw new Error(`the edge runtime entry ${id} is not supported yet`);
+    // What `next start` sets up before any entry loads: AsyncLocalStorage on globalThis, among others.
+    if (!environment) {
+      modules.require("next/dist/build/adapter/setup-node-env.external");
+      environment = true;
+    }
+    return modules.require(entry.file) as { handler: unknown };
+  }
+
+  async function runEdge(
+    id: string,
+    request: Request,
+    url: string,
+    ctx: Context,
+  ): Promise<Response> {
+    const handler = (await entryModule(id)).handler as EdgeHandler;
+    return handler(
+      new Request(new URL(url, request.url), {
+        method: request.method,
+        headers: request.headers,
+        body: request.body,
+        // @ts-expect-error a streamed body needs half duplex in fetch implementations
+        duplex: "half",
+      }),
+      { waitUntil: (promise: Promise<unknown>) => ctx.waitUntil(promise), signal: request.signal },
+    );
+  }
+
+  type Invocation = { env: Env; ctx: Context };
+
+  function run(id: string, request: Request, url: string, call: Invocation, status?: number) {
+    return config.entries[id]!.runtime === "edge"
+      ? runEdge(id, request, url, call.ctx)
+      : runNode(id, request, url, call, status);
+  }
+
+  /** Writes the not-found page into a Node response, for Pages Router pages that return `notFound`. */
+  async function render404(req: unknown, res: NodeResponse, call: Invocation): Promise<void> {
+    const notFound = config.notFound;
+    res.statusCode = 404;
+    if (notFound && "file" in notFound) {
+      const page = await call.env.ASSETS.fetch(notFound.file);
+      res.setHeader("content-type", page.headers.get("content-type") ?? "text/html; charset=utf-8");
+      res.end(Buffer.from(await page.arrayBuffer()));
+    } else if (notFound && config.entries[notFound.entry]!.runtime === "nodejs") {
+      const handler = (await entryModule(notFound.entry)).handler as NodeHandler;
+      await handler(req, res, { waitUntil: call.ctx.waitUntil, requestMeta: requestMeta(call) });
+    } else res.end("This page could not be found");
+  }
+
+  function requestMeta(call: Invocation) {
+    return {
+      relativeProjectDir: ".",
+      render404: (req: unknown, res: NodeResponse) => render404(req, res, call),
+    };
   }
 
   async function runNode(
     id: string,
     request: Request,
     url: string,
-    ctx: Context,
+    call: Invocation,
     status?: number,
   ): Promise<Response> {
+    const { ctx } = call;
     const handler = (await entryModule(id)).handler as NodeHandler;
     const req = nodeRequest(request, { url, clientAddress: ctx.oester.clientAddress });
     const res = new NodeResponse({ head: request.method === "HEAD" });
     if (status) res.statusCode = status;
     const done = handler(req, res, {
       waitUntil: (promise: Promise<unknown>) => ctx.waitUntil(promise),
-      requestMeta: { relativeProjectDir: "." },
+      requestMeta: requestMeta(call),
     }).then(
       () => {
         if (!res.writableEnded) res.end();
@@ -136,6 +198,7 @@ export function createServer(config: ServerConfig, parts: Part[]) {
 
   return {
     async fetch(request: Request, env: Env, ctx: Context): Promise<Response> {
+      const call = { env, ctx };
       const url = new URL(request.url);
       let middlewareResponse: Response | undefined;
       let requestHeaders: Headers = request.headers;
@@ -203,21 +266,28 @@ export function createServer(config: ServerConfig, parts: Part[]) {
         for (const [key, value] of Object.entries(invocation.query))
           for (const item of Array.isArray(value) ? value : [value]) query.append(key, item);
         const search = query.size ? `?${query}` : "";
-        const response = await runNode(
+        const response = await run(
           target.entry,
           forwarded,
           `${invocation.pathname}${search}`,
-          ctx,
+          call,
           result.status,
         );
         return withHeaders(response, result.resolvedHeaders);
       }
+      if (config.notFound && "file" in config.notFound) {
+        const page = await env.ASSETS.fetch(config.notFound.file);
+        return withHeaders(
+          new Response(page.body, { status: 404, headers: page.headers }),
+          result.resolvedHeaders,
+        );
+      }
       if (config.notFound) {
-        const response = await runNode(
-          config.notFound,
+        const response = await run(
+          config.notFound.entry,
           forwarded,
           `${url.pathname}${url.search}`,
-          ctx,
+          call,
           404,
         );
         return withHeaders(response, result.resolvedHeaders);

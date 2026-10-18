@@ -122,6 +122,18 @@ describe("pages", () => {
   });
 });
 
+describe("the edge runtime", () => {
+  test("a page with runtime edge renders per request, with the deployment's variables", async () => {
+    const page = await html("/edge", { headers: { "user-agent": "oester-e2e" } });
+    expect(page).toContain("rendered on the edge runtime for <!-- -->oester-e2e");
+    expect(page).toContain("greeting: <!-- -->hello from Oester");
+  });
+
+  test("a route handler with runtime edge answers", async () => {
+    expect(await (await get("/api/edge")).json()).toEqual({ runtime: "edge", path: "/api/edge" });
+  });
+});
+
 describe("route handlers", () => {
   test("GET reads the deployment's variables at request time", async () => {
     const response = await get("/api/hello");

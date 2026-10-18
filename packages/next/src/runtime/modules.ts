@@ -551,5 +551,9 @@ export function createModules(options: ModulesOptions) {
     /** Requires a module by absolute path or bare specifier, as from the working directory. */
     require: (id: string) => makeRequire(`${options.process.cwd()}/index.js`)(id),
     has: (path: string) => isFile(realpath(path)),
+    /** A file's content as text. */
+    read: (path: string) => text(realpath(path)),
+    /** A file's content as bytes. */
+    bytes: (path: string) => bytes(realpath(path)),
   };
 }
