@@ -1,0 +1,19 @@
+{
+  "name": "example-nuxt-full",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "nuxt build"
+  },
+  "dependencies": {
+    "@oester/nuxt": "workspace:*",
+    "nuxt": "4.6.2",
+    "vue": "3.5.44"
+  },
+  "oester": {
+    "variables": {
+      "NUXT_API_SECRET": "s3cret",
+      "NUXT_PUBLIC_GREETING": "hallo"
+    }
+  }
+}

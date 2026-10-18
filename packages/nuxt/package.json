@@ -1,0 +1,53 @@
+{
+  "name": "@oester/nuxt",
+  "description": "Nuxt module and Nitro preset that write the Oester build output",
+  "version": "0.0.0",
+  "license": "MIT",
+  "keywords": [
+    "nuxt",
+    "nuxt-module",
+    "nitro",
+    "nitro-preset",
+    "oester"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/slimluccii/oester-adapters.git",
+    "directory": "packages/nuxt"
+  },
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/module.d.ts",
+      "default": "./dist/module.js"
+    },
+    "./preset": {
+      "types": "./dist/preset.d.ts",
+      "default": "./dist/preset.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist",
+    "!dist/**/*.test.*"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "scripts": {
+    "build": "rm -rf dist && tsc -p tsconfig.build.json",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@oester/build-output": "workspace:^"
+  },
+  "peerDependencies": {
+    "nitropack": "^2.12.0"
+  },
+  "devDependencies": {
+    "nitropack": "2.13.4"
+  }
+}
