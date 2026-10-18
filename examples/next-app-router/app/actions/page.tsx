@@ -1,5 +1,6 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
+import { Greeter } from "./greeter";
 
 async function remember(form: FormData) {
   "use server";
@@ -16,6 +17,7 @@ export default async function Actions() {
         <input name="value" defaultValue="oyster" />
         <button type="submit">remember</button>
       </form>
+      <Greeter />
     </main>
   );
 }

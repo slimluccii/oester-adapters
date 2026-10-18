@@ -177,6 +177,14 @@ describe("route handlers", () => {
     expect(rest).toBe("second\n");
   });
 
+  test("next/og renders an image, with its WebAssembly and fonts read from the deployment", async () => {
+    const response = await get("/og");
+    expect(response.status).toBe(200);
+    expect(response.headers.get("content-type")).toBe("image/png");
+    const bytes = new Uint8Array(await response.arrayBuffer());
+    expect([...bytes.slice(1, 4)].map((b) => String.fromCharCode(b)).join("")).toBe("PNG");
+  });
+
   test("a metadata route is served", async () => {
     const response = await get("/robots.txt");
     expect(response.status).toBe(200);
@@ -195,6 +203,59 @@ describe("server actions", () => {
     expect(response.status).toBe(303);
     expect(response.headers.get("location")).toBe("/actions");
     expect(response.headers.get("set-cookie")).toMatch(/^remembered=pearl/);
+  });
+});
+
+describe("server actions called from the client", () => {
+  test("an action imported by a client component answers with its result as RSC", async () => {
+    const page = await html("/actions");
+    const scripts = [...page.matchAll(/src="(\/_next\/static\/[^"]+\.js)"/g)].map((m) => m[1]!);
+    let id: string | undefined;
+    for (const script of scripts) {
+      const source = await (await get(script)).text();
+      id ??= /"([0-9a-f]{40,42})",[^"]{0,80}"greet"/.exec(source)?.[1];
+    }
+    expect(id).toBeDefined();
+    const response = await get("/actions", {
+      method: "POST",
+      headers: {
+        "next-action": id!,
+        accept: "text/x-component",
+        "content-type": "text/plain;charset=UTF-8",
+      },
+      body: JSON.stringify(["oyster"]),
+    });
+    expect(response.status).toBe(200);
+    expect(response.headers.get("content-type")).toContain("text/x-component");
+    expect(await response.text()).toContain("hello oyster, from a server action");
+  });
+});
+
+describe("caching", () => {
+  const stamp = async () => Number(/stamp (?:<!-- -->)?(\d+)/.exec(await html("/cached-page"))![1]);
+
+  test("revalidatePath regenerates a prerendered page in this isolate", async () => {
+    const before = await stamp();
+    expect(await stamp()).toBe(before);
+    const response = await get("/api/revalidate", { method: "POST" });
+    expect(await response.json()).toEqual({ revalidated: true });
+    expect(await stamp()).toBeGreaterThan(before);
+  });
+
+  test("draft mode sets its cookie and renders the prerendered page per request", async () => {
+    const response = await get("/api/draft");
+    const cookie = response.headers.get("set-cookie")!;
+    expect(cookie).toMatch(/^__prerender_bypass=/);
+    const page = await html("/cached-page", { headers: { cookie: cookie.split(";")[0]! } });
+    expect(page).toContain("draft: <!-- -->true");
+  });
+
+  test("a segment prefetch of a prerendered page gets its RSC segment", async () => {
+    const response = await get("/blog/first?_rsc=x", {
+      headers: { rsc: "1", "next-router-prefetch": "1", "next-router-segment-prefetch": "/_tree" },
+    });
+    expect(response.status).toBe(200);
+    expect(response.headers.get("content-type")).toContain("text/x-component");
   });
 });
 
