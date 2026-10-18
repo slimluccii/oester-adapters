@@ -5,7 +5,12 @@ import { writeOutput, type Route } from "@oester/build-output";
 import type { NextAdapter } from "next";
 import { oesterConfig, type ConfigSubset } from "./config.ts";
 import { groupParts, virtualPath } from "./parts.ts";
-import { manifestHeaders, manifestRedirects, middlewarePatterns } from "./routing.ts";
+import {
+  manifestHeaders,
+  manifestRedirects,
+  middlewarePatterns,
+  withTrailingSlashes,
+} from "./routing.ts";
 import type { Entry, ServerConfig } from "./runtime/server.ts";
 import { filesBelow, isDirectory, serverFile } from "./server-files.ts";
 import { staticTarget } from "./static-files.ts";
@@ -40,6 +45,25 @@ async function onBuildComplete(ctx: BuildContext): Promise<void> {
   const serverDir = join(staging, "server");
   await mkdir(staticDir, { recursive: true });
   await mkdir(join(serverDir, "parts"), { recursive: true });
+
+  // A static export is the files Next wrote to its out directory, as they are; public/ is among them already.
+  if (config.output === "export") {
+    for (const file of outputs.staticFiles) {
+      await mkdir(dirname(join(staticDir, file.id)), { recursive: true });
+      await copyFile(file.filePath, join(staticDir, file.id));
+    }
+    const { warnings } = await writeOutput({
+      root: projectDir,
+      framework: { name: "next", version: nextVersion },
+      staticDir,
+      base: basePath || undefined,
+      routes: [{ match: "/*", type: "static" }],
+      // Without a notFound field Oester answers with 404.html, which the export writes.
+      htmlHandling: trailingSlash ? "force-trailing-slash" : "drop-trailing-slash",
+    });
+    for (const warning of warnings) warn(warning);
+    return;
+  }
 
   const staticFiles: { pathname: string; file: string }[] = [];
   async function addStatic(pathname: string, filePath: string): Promise<void> {
@@ -171,7 +195,7 @@ async function onBuildComplete(ctx: BuildContext): Promise<void> {
     links,
     builtAt: new Date().toISOString(),
     routing: { ...routing, caseSensitive: Boolean(config.experimental?.caseSensitiveRoutes) },
-    pathnames,
+    pathnames: withTrailingSlashes(pathnames, trailingSlash),
     entries,
     middleware,
     notFound,

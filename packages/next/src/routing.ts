@@ -143,3 +143,19 @@ export function middlewarePatterns(
   const patterns = [...(nextAssets ? ["/_next/static/*"] : []), ...include];
   return patterns.length ? { include: patterns } : undefined;
 }
+
+/**
+ * Routing matches pathnames exactly, and Next.js's pathnames have no trailing slash; with `trailingSlash` on, Next
+ * redirects pages to the path with the slash, so each page is also listed there. Files keep their one path.
+ */
+export function withTrailingSlashes<T>(
+  pathnames: Record<string, T>,
+  trailingSlash: boolean,
+): Record<string, T> {
+  if (!trailingSlash) return pathnames;
+  const result = { ...pathnames };
+  for (const [pathname, target] of Object.entries(pathnames))
+    if (!pathname.endsWith("/") && !pathname.split("/").pop()!.includes("."))
+      result[`${pathname}/`] ??= target;
+  return result;
+}

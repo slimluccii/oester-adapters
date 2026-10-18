@@ -1,5 +1,11 @@
 import { describe, expect, test } from "vitest";
-import { manifestHeaders, manifestRedirects, middlewarePatterns, toPattern } from "./routing.ts";
+import {
+  manifestHeaders,
+  manifestRedirects,
+  middlewarePatterns,
+  toPattern,
+  withTrailingSlashes,
+} from "./routing.ts";
 
 describe("toPattern", () => {
   test("literal segments and plain parameters carry over, relative to the base path", () => {
@@ -173,5 +179,26 @@ describe("middlewarePatterns", () => {
     expect(middlewarePatterns([matcher("^/.*$")], [file("/:odd.txt")], "")).toEqual({
       include: ["/*"],
     });
+  });
+});
+
+describe("withTrailingSlashes", () => {
+  const targets = {
+    "/docs": "home",
+    "/docs/now": "now",
+    "/docs/file.txt": "file",
+    "/docs/now.rsc": "rsc",
+  };
+
+  test("with trailingSlash on, a page is also found at its path with the slash Next redirects to", () => {
+    expect(withTrailingSlashes(targets, true)).toEqual({
+      ...targets,
+      "/docs/": "home",
+      "/docs/now/": "now",
+    });
+  });
+
+  test("with trailingSlash off nothing changes", () => {
+    expect(withTrailingSlashes(targets, false)).toEqual(targets);
   });
 });

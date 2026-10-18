@@ -196,10 +196,24 @@ export function createServer(config: ServerConfig, parts: Part[]) {
     return result;
   }
 
+  async function notFound(request: Request, url: URL, call: Invocation): Promise<Response> {
+    if (config.notFound && "file" in config.notFound) {
+      const page = await call.env.ASSETS.fetch(config.notFound.file);
+      return new Response(page.body, { status: 404, headers: page.headers });
+    }
+    if (config.notFound)
+      return run(config.notFound.entry, request, `${url.pathname}${url.search}`, call, 404);
+    return new Response("This page could not be found", { status: 404 });
+  }
+
   return {
     async fetch(request: Request, env: Env, ctx: Context): Promise<Response> {
       const call = { env, ctx };
       const url = new URL(request.url);
+      const { basePath } = config;
+      // Oester sends a path outside the base path to the server only for the not-found page.
+      if (basePath && url.pathname !== basePath && !url.pathname.startsWith(`${basePath}/`))
+        return notFound(request, url, call);
       let middlewareResponse: Response | undefined;
       let requestHeaders: Headers = request.headers;
       const result = await resolveRoutes({
@@ -275,24 +289,7 @@ export function createServer(config: ServerConfig, parts: Part[]) {
         );
         return withHeaders(response, result.resolvedHeaders);
       }
-      if (config.notFound && "file" in config.notFound) {
-        const page = await env.ASSETS.fetch(config.notFound.file);
-        return withHeaders(
-          new Response(page.body, { status: 404, headers: page.headers }),
-          result.resolvedHeaders,
-        );
-      }
-      if (config.notFound) {
-        const response = await run(
-          config.notFound.entry,
-          forwarded,
-          `${url.pathname}${url.search}`,
-          call,
-          404,
-        );
-        return withHeaders(response, result.resolvedHeaders);
-      }
-      return new Response("This page could not be found", { status: 404 });
+      return withHeaders(await notFound(forwarded, url, call), result.resolvedHeaders);
     },
   };
 }
