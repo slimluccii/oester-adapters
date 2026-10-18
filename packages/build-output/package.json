@@ -11,6 +11,7 @@
   "type": "module",
   "exports": {
     ".": {
+      "oester-source": "./src/index.ts",
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
     },
