@@ -24,14 +24,14 @@ export type OutputOptions = Omit<Manifest, "version" | "compatibilityDate" | "se
 export async function writeOutput(
   options: OutputOptions,
 ): Promise<{ manifest: Manifest; warnings: string[] }> {
-  const { root, staticDir, server, base, redirects, headers, ...rest } = options;
+  const { root, staticDir, server, framework, base, redirects, headers, ...rest } = options;
   const normalizedBase =
     base === undefined || base.replace(/^\/+|\/+$/g, "") === ""
       ? undefined
       : `/${base.replace(/^\/+|\/+$/g, "")}/`;
   const manifest: Manifest = {
     version: 3,
-    framework: rest.framework,
+    framework,
     compatibilityDate,
     ...(normalizedBase ? { base: normalizedBase } : {}),
     ...rest,
