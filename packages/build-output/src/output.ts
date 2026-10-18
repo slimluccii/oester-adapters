@@ -24,7 +24,8 @@ export type OutputOptions = Omit<Manifest, "version" | "compatibilityDate" | "se
 export async function writeOutput(
   options: OutputOptions,
 ): Promise<{ manifest: Manifest; warnings: string[] }> {
-  const { root, staticDir, server, framework, base, redirects, headers, ...rest } = options;
+  const { root, staticDir, server, framework, base, redirects, headers, immutable, ...rest } =
+    options;
   const normalizedBase =
     base === undefined || base.replace(/^\/+|\/+$/g, "") === ""
       ? undefined
@@ -37,6 +38,7 @@ export async function writeOutput(
     ...rest,
     ...(redirects?.length ? { redirects } : {}),
     ...(headers?.length ? { headers } : {}),
+    ...(immutable?.length ? { immutable } : {}),
     ...(server ? { server: { entry: "server/index.mjs" } } : {}),
   };
   check(manifest);
@@ -60,6 +62,7 @@ function check(manifest: Manifest): void {
       : []),
     ...(manifest.redirects ?? []).map((r) => r.source),
     ...(manifest.headers ?? []).map((h) => h.source),
+    ...(manifest.immutable ?? []),
   ];
   for (const pattern of patterns)
     if (!isPattern(pattern))

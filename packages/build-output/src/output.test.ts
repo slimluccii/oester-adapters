@@ -98,6 +98,21 @@ describe("writeOutput", () => {
     expect(manifest).not.toHaveProperty("headers");
   });
 
+  test("immutable patterns are passed on and checked, and left out when empty", async () => {
+    const root = await project({ "dist/index.html": "home" });
+    const base = {
+      root,
+      framework: { name: "test" },
+      staticDir: join(root, "dist"),
+      routes: [{ match: "/*", type: "static" as const }],
+    };
+    await writeOutput({ ...base, immutable: ["/_astro/*"] });
+    expect((await manifestOf(root)).immutable).toEqual(["/_astro/*"]);
+    await writeOutput({ ...base, immutable: [] });
+    expect(await manifestOf(root)).not.toHaveProperty("immutable");
+    await expect(writeOutput({ ...base, immutable: ["/assets/*.js"] })).rejects.toThrow(/\*\.js/);
+  });
+
   test("a route that needs the server without a server entry is refused", async () => {
     const root = await project({ "dist/index.html": "home" });
     await expect(

@@ -16,6 +16,8 @@ export type Manifest = {
   middleware?: { include: string[]; exclude?: string[] };
   redirects?: Redirect[];
   headers?: HeaderRule[];
+  /** Static files whose content never changes under their name, such as a bundler's hashed assets: cached for a year. */
+  immutable?: string[];
   htmlHandling?: HtmlHandling;
   notFound?: NotFound;
   server?: { entry: string };
