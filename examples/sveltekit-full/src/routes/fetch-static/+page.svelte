@@ -3,3 +3,4 @@
 </script>
 
 <pre id="robots">{data.robots}</pre>
+<p id="prerendered">{data.prerendered}</p>

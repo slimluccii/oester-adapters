@@ -108,7 +108,20 @@ describe("server-rendered pages", () => {
     expect(text(html, "request-id")).toMatch(/^[0-9a-f-]{36}$/);
     expect(text(html, "user-agent")).toBe("e2e");
     expect(html).toContain("transformed by handle");
-    expect(response.headers.get("set-cookie")).toMatch(/visits=3/);
+    const cookies = response.headers.getSetCookie();
+    expect(cookies).toHaveLength(2);
+    expect(cookies[0]).toMatch(/^visits=3;.*HttpOnly/);
+    expect(cookies[1]).toMatch(/^theme=dark;/);
+  });
+
+  test("client-side navigation reads __data.json, from the server or prerendered", async () => {
+    const rendered = await get("/ssr/__data.json");
+    expect(rendered.status).toBe(200);
+    expect(fromServer(rendered)).toBe(true);
+    expect((await rendered.json()).type).toBe("data");
+    const prerendered = await get("/auto/first/__data.json");
+    expect(prerendered.status).toBe(200);
+    expect(fromServer(prerendered)).toBe(false);
   });
 
   test("a response without cache-control, or with a cookie, is not stored", async () => {
@@ -242,6 +255,18 @@ describe("endpoints", () => {
     expect(put.headers.get("allow")).toMatch(/GET/);
   });
 
+  test("a multipart upload arrives intact and binary comes back intact", async () => {
+    const bytes = new Uint8Array(70_000).map((_, i) => (i * 31) % 256);
+    const body = new FormData();
+    body.append("file", new Blob([bytes]), "data.bin");
+    const response = await get("/api/upload", { method: "POST", body, headers: { origin } });
+    expect(response.status).toBe(200);
+    const { createHash } = await import("node:crypto");
+    expect(response.headers.get("x-sha256")).toBe(createHash("sha256").update(bytes).digest("hex"));
+    expect(response.headers.get("x-name")).toBe("data.bin");
+    expect(new Uint8Array(await response.arrayBuffer())).toEqual(bytes.toReversed());
+  });
+
   test("node:crypto and Buffer work on the edge", async () => {
     expect(await (await get("/api/crypto")).text()).toBe(
       "bb9e9dcd1f374e18c92cccd52f768b9e10e19ec3bdfddeffe07aedb3078c7c84 b2VzdGVy",
@@ -272,10 +297,12 @@ describe("fetch in load functions", () => {
     expect(text(html, "hello")).toBe("hello via handleFetch");
   });
 
-  test("fetching a static file of the app reads it from the deployment", async () => {
+  test("fetching a static file or a prerendered endpoint reads it from the deployment", async () => {
     const response = await get("/fetch-static");
     expect(response.status).toBe(200);
-    expect(text(await response.text(), "robots")).toContain("User-agent: *");
+    const html = await response.text();
+    expect(text(html, "robots")).toContain("User-agent: *");
+    expect(text(html, "prerendered")).toBe("true");
   });
 });
 

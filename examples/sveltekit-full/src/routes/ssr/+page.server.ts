@@ -3,6 +3,7 @@ import { SECRET_MESSAGE } from "$app/env/private";
 export function load({ cookies, getClientAddress, platform, locals, request }) {
   const visits = Number(cookies.get("visits") ?? "0") + 1;
   cookies.set("visits", String(visits), { path: "/" });
+  cookies.set("theme", "dark", { path: "/", httpOnly: false });
   return {
     visits,
     secret: SECRET_MESSAGE,

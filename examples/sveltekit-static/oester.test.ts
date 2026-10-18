@@ -7,6 +7,7 @@ test("every page is a prerendered file", async () => {
     ["/about", "About this static site"],
     ["/blog/hello-world", "Hello, world"],
     ["/blog/second-post", "A second post"],
+    ["/blog/h%C3%A9llo-wereld", "Hallo, wereld"],
   ]) {
     const response = await get(path);
     expect(response.status, path).toBe(200);
