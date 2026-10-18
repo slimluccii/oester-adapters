@@ -4,3 +4,5 @@ packages:
   - e2e
 allowBuilds:
   esbuild: true
+  # sharp ships prebuilt binaries as optional dependencies; its script only builds from source as a fallback.
+  sharp: false

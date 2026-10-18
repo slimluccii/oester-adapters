@@ -1,0 +1,2 @@
+/old-blog/:slug /blog/:slug 301
+/feed /blog 302

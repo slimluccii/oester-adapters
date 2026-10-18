@@ -1,0 +1,17 @@
+---
+import Layout from '../../layouts/Layout.wald'
+import { getCollection, getEntry } from 'wald:content'
+type Props = { slug: string }
+export async function getStaticPaths() {
+  const posts = await getCollection('blog', { locale: 'en' })
+  return posts.map(p => ({ params: { slug: p.slug } }))
+}
+const post = await getEntry('blog', $$props.slug, { locale: 'en' })
+---
+<Layout title={post.data.title}>
+  <article class="post-body">
+    <h1>{post.data.title}</h1>
+    {new SafeHtml(post.body)}
+    <a href={'/nl/blog/' + post.slug} hreflang="nl">Nederlands</a>
+  </article>
+</Layout>

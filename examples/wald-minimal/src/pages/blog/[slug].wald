@@ -1,0 +1,17 @@
+---
+import Layout from '../../layouts/Layout.wald'
+import { getCollection, getEntry } from 'wald:content'
+type Props = { slug: string }
+export async function getStaticPaths() {
+  const posts = await getCollection('blog')
+  return posts.map(p => ({ params: { slug: p.slug } }))
+}
+const post = await getEntry('blog', $$props.slug)
+// SafeHtml opts out of the runtime's default HTML-escaping — safe here since post.body is rendered markdown from your own local content, not untrusted input
+---
+<Layout title={post.data.title}>
+  <article class="post-body">
+    <h1>{post.data.title}</h1>
+    {new SafeHtml(post.body)}
+  </article>
+</Layout>

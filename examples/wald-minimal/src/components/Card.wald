@@ -1,0 +1,8 @@
+---
+const { title, body, icon } = $$props
+---
+<article class="card">
+  <div class="card-icon">{icon}</div>
+  <h3>{title}</h3>
+  <p>{body}</p>
+</article>

@@ -1,0 +1,15 @@
+---
+const { initial = 0 } = $$props
+---
+<div class="counter">
+  <span class="counter-value">{initial}</span>
+  <button class="counter-btn">+</button>
+</div>
+<script>
+export default function (root, props) {
+  let count = props.initial
+  root.querySelector('.counter-btn').addEventListener('click', () => {
+    root.querySelector('.counter-value').textContent = ++count
+  })
+}
+</script>

@@ -1,0 +1,24 @@
+---
+import Layout from '../layouts/Layout.wald'
+import Card from '../components/Card.wald'
+import Counter from '../components/Counter.wald'
+import { Image } from 'wald:image'
+const title = 'Hello Wald'
+---
+<Layout title={title}>
+  <section class="hero">
+    <p class="eyebrow">Built with WaldJS</p>
+    <h1>Plant your site.<br>Let it grow.</h1>
+    <Image src="/assets/forest.jpg" alt="A forest" widths={[400, 800]} />
+    <a class="btn" href="/blog" wald:prefetch="visible">Read the blog</a>
+  </section>
+  <section class="features">
+    <Card icon="⚡" title="0 KB JS" body="Static by default" />
+    <Card icon="📄" title="Content" body="A blog from /content" />
+    <Card icon="🌱" title="Interactive" body="Islands when needed" />
+  </section>
+  <section class="counter-demo">
+    <p>Try the counter</p>
+    <Counter initial={3} canopy:visible />
+  </section>
+</Layout>

@@ -1,0 +1,16 @@
+---
+import Layout from '../../layouts/Layout.wald'
+import { getCollection } from 'wald:content'
+const posts = await getCollection('blog', { locale: 'en' })
+const count = posts.length
+const postList = posts.map(p => '<a class="post" href="/blog/' + p.slug + '"><h3>' + p.data.title + '</h3></a>').join('')
+---
+<Layout title="Blog">
+  <section class="page-header">
+    <h1>Blog</h1>
+    <p>{count} posts</p>
+  </section>
+  <section class="post-list">
+    {new SafeHtml(postList)}
+  </section>
+</Layout>

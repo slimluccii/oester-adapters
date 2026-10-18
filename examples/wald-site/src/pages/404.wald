@@ -1,0 +1,9 @@
+---
+import Layout from '../layouts/Layout.wald'
+---
+<Layout title="Lost in the forest">
+  <section class="page-header">
+    <h1>Lost in the forest</h1>
+    <p>This page does not exist.</p>
+  </section>
+</Layout>

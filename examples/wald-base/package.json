@@ -1,0 +1,14 @@
+{
+  "name": "wald-base",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wald grow",
+    "build": "wald build",
+    "preview": "wald preview"
+  },
+  "dependencies": {
+    "@oester/wald": "workspace:*",
+    "@waldjs/cli": "0.13.0"
+  }
+}
