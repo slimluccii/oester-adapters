@@ -29,6 +29,13 @@ describe("oesterConfig", () => {
     expect(oesterConfig(base).config.experimental).toEqual({ isrFlushToDisk: false });
   });
 
+  test("i18n routing fails the build, before anything is compiled", () => {
+    expect(() =>
+      oesterConfig({ ...base, i18n: { locales: ["en", "nl"], defaultLocale: "en" } }),
+    ).toThrow(/i18n/);
+    expect(() => oesterConfig({ ...base, i18n: null })).not.toThrow();
+  });
+
   test("other settings pass through untouched", () => {
     const { config } = oesterConfig({ ...base, basePath: "/docs", trailingSlash: true });
     expect(config.basePath).toBe("/docs");
