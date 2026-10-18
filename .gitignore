@@ -1,0 +1,12 @@
+node_modules/
+dist/
+*.tgz
+.DS_Store
+.oester/
+.astro/
+.nuxt/
+.output/
+.next/
+.svelte-kit/
+.tanstack/
+.vinxi/
