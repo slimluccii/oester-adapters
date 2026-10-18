@@ -1,4 +1,5 @@
 import { AsyncLocalStorage } from "node:async_hooks";
+import { isolatedGlobal } from "./global.ts";
 
 /** An entry Next.js built for its edge runtime: scripts that register a handler on `self._ENTRIES`. */
 export type EdgeEntry = {
@@ -17,20 +18,6 @@ export type EdgeEntry = {
 
 export type EdgeHandler = (request: Request, ctx: object) => Promise<Response>;
 
-// Functions that throw when called with another `this` in some runtimes, so the sandbox binds them to the real global.
-const globalFunctions = [
-  "fetch",
-  "setTimeout",
-  "clearTimeout",
-  "setInterval",
-  "clearInterval",
-  "queueMicrotask",
-  "structuredClone",
-  "atob",
-  "btoa",
-  "reportError",
-] as const;
-
 /**
  * Evaluates an edge entry's scripts against a global object of its own, which falls back to the real one: what they
  * register stays off the global the isolate shares with other deployments.
@@ -48,19 +35,7 @@ export async function loadEdgeEntry(
   const process = Object.create(host.process, {
     env: { value: { ...entry.env, ...host.process.env }, enumerable: true, writable: true },
   });
-  const sandbox: Record<string, unknown> = Object.create(globalThis);
-  // Defined rather than assigned: an assignment would reach an accessor the real global has, such as Deno's self.
-  const define = (name: string, value: unknown) =>
-    Object.defineProperty(sandbox, name, {
-      value,
-      writable: true,
-      configurable: true,
-      enumerable: true,
-    });
-  for (const name of globalFunctions) {
-    const value = (globalThis as Record<string, unknown>)[name];
-    if (typeof value === "function") define(name, value.bind(globalThis));
-  }
+  const { sandbox, define } = isolatedGlobal();
   const require = (id: string) => {
     const builtin = host.builtins[id.startsWith("node:") ? id : `node:${id}`];
     if (!builtin) throw new Error(`${id} is not available in Next's edge runtime`);

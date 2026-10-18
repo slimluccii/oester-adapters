@@ -25,8 +25,8 @@ export type ModulesOptions = {
   builtins: Readonly<Record<string, object>>;
   /** The process modules see; `cwd()` is where relative paths start. */
   process: { cwd(): string; env: Record<string, string | undefined> };
-  /** Values Node defines globally and the edge may not, handed to each module as a free variable. */
-  globals?: { Buffer?: unknown; setImmediate?: unknown; clearImmediate?: unknown };
+  /** Free variables for every module, read when the module is evaluated: the deployment's global object and the like. */
+  scope?: Readonly<Record<string, unknown>>;
   /** The modification time every file reports: when it was built. */
   mtime?: Date;
 };
@@ -56,18 +56,7 @@ const unavailable = new Set([
   "worker_threads",
 ]);
 
-const moduleParameters = [
-  "exports",
-  "require",
-  "module",
-  "__filename",
-  "__dirname",
-  "process",
-  "global",
-  "Buffer",
-  "setImmediate",
-  "clearImmediate",
-];
+const moduleParameters = ["exports", "require", "module", "__filename", "__dirname", "process"];
 
 function fsError(code: string, syscall: string, path: string): Error {
   const messages: Record<string, string> = {
@@ -110,7 +99,9 @@ export function createModules(options: ModulesOptions) {
   const directories = new Map<string, Set<string>>();
   const cache: Record<string, Module> = {};
   const mtime = options.mtime ?? new Date(0);
-  const Buffer = options.globals?.Buffer as
+  const scope = options.scope ?? {};
+  const scopeNames = Object.keys(scope);
+  const Buffer = scope.Buffer as
     | {
         from(
           value: string | Uint8Array,
@@ -343,7 +334,11 @@ export function createModules(options: ModulesOptions) {
       if (filename.endsWith(".json")) module.exports = JSON.parse(text(filename));
       else {
         const source = text(filename).replace(/^#!.*/, "");
-        const evaluate = new Function(...moduleParameters, `${source}\n//# sourceURL=${filename}`);
+        const evaluate = new Function(
+          ...moduleParameters,
+          ...scopeNames,
+          `${source}\n//# sourceURL=${filename}`,
+        );
         evaluate.call(
           module.exports,
           module.exports,
@@ -352,10 +347,7 @@ export function createModules(options: ModulesOptions) {
           filename,
           posix.dirname(filename),
           options.process,
-          globalThis,
-          options.globals?.Buffer,
-          options.globals?.setImmediate,
-          options.globals?.clearImmediate,
+          ...scopeNames.map((name) => scope[name]),
         );
       }
     } catch (error) {

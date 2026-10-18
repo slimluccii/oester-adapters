@@ -1,9 +1,9 @@
 import { Buffer } from "node:buffer";
 import process from "node:process";
-import { clearImmediate, setImmediate } from "node:timers";
 import routing, { type ResolveRoutesParams } from "@next/routing";
 import { builtins } from "./builtins.ts";
 import { loadEdgeEntry, type EdgeEntry, type EdgeHandler } from "./edge.ts";
+import { deploymentGlobal } from "./global.ts";
 import { createModules, type FileContent } from "./modules.ts";
 import { NodeResponse, nodeRequest } from "./node-http.ts";
 import { onOrigin } from "./urls.ts";
@@ -50,12 +50,14 @@ const internalHeaders = [
 
 export function createServer(config: ServerConfig, parts: Part[]) {
   (process.env as Record<string, string | undefined>).NODE_ENV ??= "production";
-  const moduleProcess = Object.create(process, { cwd: { value: () => config.projectDir } });
+  const scope = deploymentGlobal(
+    Object.create(process, { cwd: { value: () => config.projectDir } }),
+  );
   const modules = createModules({
     links: config.links,
-    builtins: { ...builtins, "node:process": moduleProcess },
-    process: moduleProcess,
-    globals: { Buffer, setImmediate, clearImmediate },
+    builtins: { ...builtins, "node:process": scope.process },
+    process: scope.process,
+    scope: scope.values,
     mtime: new Date(config.builtAt),
   });
   const loadedParts = new Map<number, Promise<void>>();
