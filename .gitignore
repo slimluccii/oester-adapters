@@ -11,3 +11,4 @@ dist/
 .tanstack/
 .vinxi/
 routeTree.gen.ts
+next-env.d.ts
