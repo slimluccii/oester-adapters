@@ -96,6 +96,12 @@ describe("server-side rendering", () => {
     expect(await response.text()).toContain("Nothing lives here");
   });
 
+  test("headers a route declares reach the page response, so a page can opt into caching", async () => {
+    const response = await get("/cached-page");
+    expect(response.headers.get("cache-control")).toBe("public, max-age=30");
+    expect(response.headers.get("x-page")).toBe("cached");
+  });
+
   test("a loader that throws renders the error component with 500", async () => {
     const response = await get("/boom");
     expect(response.status).toBe(500);
@@ -148,6 +154,36 @@ describe("server routes", () => {
   });
 });
 
+describe("server route edge cases", () => {
+  test("Node's crypto and Buffer work on the edge", async () => {
+    const body = await (await get("/api/hash", { method: "POST", body: "hello" })).json();
+    expect(body.sha256).toBe("2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824");
+    expect(body.base64).toBe("aGVsbG8=");
+    expect(body.uuid).toMatch(/^[0-9a-f-]{36}$/);
+  });
+
+  test("several cookies, including a deletion, each keep their own set-cookie header", async () => {
+    const response = await get("/api/cookies");
+    expect(response.headers.getSetCookie()).toEqual([
+      "first=1; Path=/",
+      "second=2; Path=/; Secure",
+      "stale=; Max-Age=0; Path=/",
+    ]);
+    expect(response.headers.get("cache-control")).toBe("no-store");
+  });
+
+  test("a binary body arrives byte for byte", async () => {
+    const bytes = new Uint8Array(await (await get("/api/binary")).arrayBuffer());
+    expect(bytes).toEqual(new Uint8Array(Array.from({ length: 256 }, (_, i) => i)));
+  });
+
+  test("a handler that throws answers 500 from TanStack Start, not from Oester", async () => {
+    const response = await get("/api/fail");
+    expect(response.status).toBe(500);
+    expect(response.headers.get("x-request-middleware")).toBe("ran");
+  });
+});
+
 describe("server functions", () => {
   test("a GET server function runs its middleware and handler", async () => {
     const response = await get("/_serverFn/getGreeting", {
@@ -179,6 +215,38 @@ describe("server functions", () => {
       headers: { "x-tsr-serverfn": "true", "sec-fetch-site": "cross-site" },
     });
     expect(response.status).toBe(403);
+  });
+
+  test("a server function takes FormData from a client call", async () => {
+    const form = new FormData();
+    form.set("email", "a@b.c");
+    const response = await get("/_serverFn/subscribe", {
+      method: "POST",
+      headers: serverFnHeaders,
+      body: form,
+    });
+    expect(await callResult(response)).toEqual(text("subscribed a@b.c"));
+  });
+
+  test("a validator's error reaches the caller", async () => {
+    const form = new FormData();
+    form.set("email", "nope");
+    const response = await get("/_serverFn/subscribe", {
+      method: "POST",
+      headers: serverFnHeaders,
+      body: form,
+    });
+    expect(await response.text()).toContain("an email is needed");
+  });
+
+  test("a form posted without JavaScript is redirected by the server function", async () => {
+    const response = await get("/_serverFn/subscribeWithoutJs", {
+      method: "POST",
+      headers: { "sec-fetch-site": "same-origin" },
+      body: new URLSearchParams({ email: "a@b.c" }),
+    });
+    expect(response.status).toBe(303);
+    expect(response.headers.get("location")).toBe("/?subscribed=a%40b.c");
   });
 
   test("setCookie in a server function sets the cookie, and getCookie reads it back", async () => {

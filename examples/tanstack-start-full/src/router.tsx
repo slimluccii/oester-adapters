@@ -7,7 +7,9 @@ export function getRouter() {
     scrollRestoration: true,
     defaultPreload: "intent",
     defaultNotFoundComponent: () => <p>Nothing lives here</p>,
-    defaultErrorComponent: ({ error }) => <p>Something broke: {error.message}</p>,
+    defaultErrorComponent: ({ error }) => (
+      <p>Something broke: {error instanceof Error ? error.message : String(error)}</p>
+    ),
   });
 }
 

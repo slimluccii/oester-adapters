@@ -1,3 +1,4 @@
+import { redirect } from "@tanstack/react-router";
 import { createMiddleware, createServerFn } from "@tanstack/react-start";
 import { getCookie, getRequestHeader, setCookie } from "@tanstack/react-start/server";
 
@@ -28,3 +29,18 @@ export const setTheme = createServerFn({ method: "POST" })
   });
 
 export const plainText = createServerFn({ method: "GET" }).handler(() => "plain from the server");
+
+export const subscribe = createServerFn({ method: "POST" })
+  .validator((data: FormData) => {
+    const email = data.get("email");
+    if (typeof email !== "string" || !email.includes("@")) throw new Error("an email is needed");
+    return email;
+  })
+  .handler(({ data }) => `subscribed ${data}`);
+
+// A form posted without JavaScript needs a response to navigate to, so this one redirects.
+export const subscribeWithoutJs = createServerFn({ method: "POST" })
+  .validator((data: FormData) => String(data.get("email")))
+  .handler(({ data }) => {
+    throw redirect({ to: "/", search: { subscribed: data }, statusCode: 303 });
+  });
