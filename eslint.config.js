@@ -3,7 +3,16 @@ import { defineConfig } from "eslint/config";
 import tseslint from "typescript-eslint";
 
 export default defineConfig(
-  { ignores: ["**/dist", "**/.oester", "**/.astro", "**/.nuxt", "**/.output"] },
+  {
+    ignores: [
+      "**/dist",
+      "**/.oester",
+      "**/.astro",
+      "**/.nuxt",
+      "**/.output",
+      "**/routeTree.gen.ts",
+    ],
+  },
   js.configs.recommended,
   tseslint.configs.recommended,
   {

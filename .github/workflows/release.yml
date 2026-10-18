@@ -28,9 +28,10 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm format:check
       - run: pnpm lint
+      # A package's types resolve through the dist of the packages it depends on.
+      - run: pnpm build
       - run: pnpm typecheck
       - run: pnpm test
-      - run: pnpm build
 
   select-mode:
     if: github.event_name == 'push'
