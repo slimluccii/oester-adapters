@@ -1,0 +1,7 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "paths": { "@oester/build-output": ["../build-output/src/index.ts"] }
+  },
+  "include": ["src"]
+}

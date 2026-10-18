@@ -1,0 +1,1 @@
+This file is read on the server through env.ASSETS.
