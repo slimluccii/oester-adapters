@@ -8,6 +8,8 @@
     "url": "git+https://github.com/slimluccii/oester-adapters.git",
     "directory": "packages/svelte"
   },
+  "homepage": "https://github.com/slimluccii/oester-adapters/tree/main/packages/svelte#readme",
+  "bugs": "https://github.com/slimluccii/oester-adapters/issues",
   "keywords": [
     "adapter",
     "oester",

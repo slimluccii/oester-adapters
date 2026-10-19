@@ -1,6 +1,12 @@
 # @oester/astro
 
-Astro adapter for [Oester](https://oester.fr).
+Astro adapter for [Oester](https://oester.fr). It writes the [Oester build output](https://github.com/slimluccii/oester/blob/main/docs/build-output.md) to `.oester/output`.
+
+## Usage
+
+```sh
+npm install @oester/astro
+```
 
 ```js
 // astro.config.mjs
@@ -13,6 +19,8 @@ export default defineConfig({
   cache: { provider: oesterCache() },
 });
 ```
+
+The adapter needs Astro 7.4 or later.
 
 ## Supported
 

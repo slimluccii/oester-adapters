@@ -14,6 +14,8 @@
     "url": "git+https://github.com/slimluccii/oester-adapters.git",
     "directory": "packages/astro"
   },
+  "homepage": "https://github.com/slimluccii/oester-adapters/tree/main/packages/astro#readme",
+  "bugs": "https://github.com/slimluccii/oester-adapters/issues",
   "type": "module",
   "exports": {
     ".": {
