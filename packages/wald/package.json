@@ -33,16 +33,17 @@
     "node": ">=22.12.0"
   },
   "scripts": {
-    "build": "rm -rf dist && tsc -p tsconfig.build.json",
+    "build": "tsdown",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@oester/build-output": "workspace:^"
+    "esbuild": "0.28.2"
   },
   "peerDependencies": {
     "@waldjs/cli": ">=0.13.0"
   },
   "devDependencies": {
+    "@oester/build-output": "workspace:*",
     "@waldjs/cli": "0.13.0"
   }
 }

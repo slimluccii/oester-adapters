@@ -4,7 +4,7 @@ Framework adapters published as `@oester/*`, each writing the Oester build outpu
 
 ## Map
 
-- `packages/build-output/`: what every adapter shares: `writeOutput()` checks and writes the manifest and static files, `bundleServer()` bundles the server for Bunny Edge and refuses builtins Oester does not provide. Its `contract.ts` mirrors the oester ingest.
+- `packages/build-output/`: what every adapter shares: `writeOutput()` checks and writes the manifest and static files, `bundleServer()` bundles the server for Bunny Edge and refuses builtins Oester does not provide. Its `contract.ts` mirrors the oester ingest. It is private: tsdown bundles it into each adapter's `dist`.
 - `packages/<framework>/`: one adapter each, written against the framework's own adapter API.
 - `examples/<framework>-<shape>/`: sites of different shapes, each with an `oester.test.ts` of HTTP checks.
 - `e2e/`: the runner (`run.ts`) and request helpers (`get.ts`).

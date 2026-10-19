@@ -1,5 +1,6 @@
 {
   "name": "@oester/build-output",
+  "private": true,
   "description": "Writes the Oester build output: the manifest, the static files and the server bundle",
   "version": "0.1.0",
   "license": "MIT",
@@ -21,9 +22,6 @@
     "dist",
     "!dist/**/*.test.*"
   ],
-  "publishConfig": {
-    "access": "public"
-  },
   "engines": {
     "node": ">=22.12.0"
   },

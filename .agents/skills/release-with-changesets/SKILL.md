@@ -7,4 +7,4 @@ description: Record and release package changes with Changesets. Use when a chan
 2. Push to `main` (on the operator's go). CI's version job opens a "chore: version packages" pull request, and the dev job publishes the packages that have a changeset under the `dev` dist-tag.
 3. Merging that pull request publishes the new versions with trusted publishing (OIDC, environment `npm`) and creates GitHub releases.
 
-A change to `@oester/build-output` bumps every adapter that depends on it. When an adapter relies on new loader behavior, the operator deploys Oester and releases the loader before the adapter is published.
+`@oester/build-output` is private and bundled into every adapter by tsdown, so a change to it needs a changeset for each adapter it changes. When an adapter relies on new loader behavior, the operator deploys Oester and releases the loader before the adapter is published.
