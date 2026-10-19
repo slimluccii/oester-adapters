@@ -5,7 +5,7 @@ Framework adapters that write the [Oester build output](https://github.com/sliml
 | Package                  | Framework                                                                     |
 | ------------------------ | ----------------------------------------------------------------------------- |
 | `@oester/astro`          | Astro                                                                         |
-| `@oester/nuxt`           | Nuxt and other Nitro apps                                                     |
+| `@oester/nitro`          | Nuxt and other Nitro apps                                                     |
 | `@oester/next`           | Next.js                                                                       |
 | `@oester/sveltekit`      | SvelteKit                                                                     |
 | `@oester/tanstack-start` | TanStack Start                                                                |

@@ -1,15 +1,15 @@
-# @oester/nuxt
+# @oester/nitro
 
-Nuxt module and Nitro preset for [Oester](https://oester.fr).
+Nitro preset for [Oester](https://oester.fr), for Nuxt and other apps built on Nitro 2.
 
 ```ts
 // nuxt.config.ts
 export default defineNuxtConfig({
-  modules: ["@oester/nuxt"],
+  nitro: { preset: "@oester/nitro" },
 });
 ```
 
-A Nitro app without Nuxt uses the preset: `preset: "@oester/nuxt/preset"`.
+A Nitro app without Nuxt sets `preset: "@oester/nitro"` in its `nitro.config.ts`.
 
 ## Supported
 

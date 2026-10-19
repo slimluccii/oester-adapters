@@ -6,7 +6,7 @@
     "build": "nuxt build"
   },
   "dependencies": {
-    "@oester/nuxt": "workspace:*",
+    "@oester/nitro": "workspace:*",
     "nuxt": "4.6.2",
     "vue": "3.5.44"
   },

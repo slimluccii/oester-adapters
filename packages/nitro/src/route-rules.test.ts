@@ -1,8 +1,8 @@
 import { expect, test } from "vitest";
-import { nuxtRouteRules } from "./route-rules.ts";
+import { nitroRouteRules } from "./route-rules.ts";
 
 test("redirects keep Nitro's status: 307 for a string, the given one for an object", () => {
-  const result = nuxtRouteRules({
+  const result = nitroRouteRules({
     "/old": { redirect: "/about" },
     "/moved": { redirect: { to: "/about", statusCode: 302 } },
   });
@@ -14,7 +14,7 @@ test("redirects keep Nitro's status: 307 for a string, the given one for an obje
 });
 
 test("** at the end becomes * in the source and :splat in a destination that also ends in **", () => {
-  const result = nuxtRouteRules({
+  const result = nitroRouteRules({
     "/blog/**": { redirect: "/posts/**" },
     "/shop/**": { redirect: "/store" },
   });
@@ -25,7 +25,7 @@ test("** at the end becomes * in the source and :splat in a destination that als
 });
 
 test("a single * and :name each match one segment", () => {
-  const result = nuxtRouteRules({
+  const result = nitroRouteRules({
     "/a/*/b": { redirect: "/c" },
     "/u/:id": { redirect: "/users/:id" },
   });
@@ -36,7 +36,7 @@ test("a single * and :name each match one segment", () => {
 });
 
 test("headers become manifest headers, without the ones Oester refuses", () => {
-  const result = nuxtRouteRules({
+  const result = nitroRouteRules({
     "/about": { headers: { "x-fixture": "about", "set-cookie": "a=1" } },
   });
   expect(result.headers).toEqual([{ source: "/about", headers: { "x-fixture": "about" } }]);
@@ -44,7 +44,7 @@ test("headers become manifest headers, without the ones Oester refuses", () => {
 });
 
 test("0033: cache-control is dropped without a note, since edge rules set browser cache times", () => {
-  const result = nuxtRouteRules({
+  const result = nitroRouteRules({
     "/about": { headers: { "cache-control": "public, max-age=60" } },
     "/_nuxt/**": { headers: { "cache-control": "immutable" } },
   });
@@ -52,7 +52,7 @@ test("0033: cache-control is dropped without a note, since edge rules set browse
 });
 
 test("a pattern the manifest cannot express, or an unsupported status, is left to the server with a note", () => {
-  const result = nuxtRouteRules({
+  const result = nitroRouteRules({
     "/a/**/b": { redirect: "/c" },
     "/x": { redirect: { to: "/y", statusCode: 303 } },
     "/ok": { redirect: "/fine" },
@@ -62,7 +62,7 @@ test("a pattern the manifest cannot express, or an unsupported status, is left t
 });
 
 test("rules without a redirect or headers add nothing", () => {
-  expect(nuxtRouteRules({ "/": { prerender: true }, "/api/**": { cors: true } })).toEqual({
+  expect(nitroRouteRules({ "/": { prerender: true }, "/api/**": { cors: true } })).toEqual({
     redirects: [],
     headers: [],
     skipped: [],

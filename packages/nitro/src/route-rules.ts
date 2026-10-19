@@ -9,7 +9,7 @@ type RouteRule = {
 const statuses = new Set([301, 302, 307, 308]);
 
 /** Translates Nitro route rules into manifest redirects and headers; what the manifest cannot express stays with Nitro. */
-export function nuxtRouteRules(rules: Record<string, RouteRule>): {
+export function nitroRouteRules(rules: Record<string, RouteRule>): {
   redirects: Redirect[];
   headers: HeaderRule[];
   skipped: string[];

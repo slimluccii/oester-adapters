@@ -4,7 +4,7 @@ import { fileURLToPath } from "node:url";
 import { nodeBuiltins, outputDirectory, writeOutput, type Route } from "@oester/build-output";
 import { edgeCacheRule } from "./edge-cache.ts";
 import { immutablePatterns } from "./immutable.ts";
-import { nuxtRouteRules } from "./route-rules.ts";
+import { nitroRouteRules } from "./route-rules.ts";
 
 type Nitro = {
   options: {
@@ -23,15 +23,15 @@ const builtins = [...nodeBuiltins].map((name) => `node:${name}`);
 
 async function emit(nitro: Nitro): Promise<void> {
   const { options } = nitro;
-  const { redirects, headers, skipped } = nuxtRouteRules(
-    options.routeRules as Parameters<typeof nuxtRouteRules>[0],
+  const { redirects, headers, skipped } = nitroRouteRules(
+    options.routeRules as Parameters<typeof nitroRouteRules>[0],
   );
   for (const rule of skipped)
     nitro.logger.warn(
       `Not in the Oester manifest, so it applies only to responses from the server: ${rule}`,
     );
   const has = (file: string) => existsSync(join(options.output.publicDir, file));
-  // nuxt generate prerenders every page, and writes 200.html as the shell of a single page app.
+  // A static build prerenders every page; nuxt generate also writes 200.html as the shell of a single page app.
   const routes: Route[] = options.static
     ? [{ match: "/*", type: "static", ...(has("200.html") ? { fallback: "200.html" } : {}) }]
     : [{ match: "/*", type: "static-or-server" }];
