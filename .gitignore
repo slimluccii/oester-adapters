@@ -12,3 +12,4 @@ dist/
 .vinxi/
 routeTree.gen.ts
 next-env.d.ts
+out/

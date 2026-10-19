@@ -5,3 +5,5 @@ pnpm-lock.yaml
 .next/
 .nuxt/
 .output/
+out/
+next-env.d.ts
