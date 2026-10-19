@@ -1,7 +1,7 @@
 {
   "name": "@oester/nuxt",
   "description": "Nuxt module and Nitro preset that write the Oester build output",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "license": "MIT",
   "keywords": [
     "nuxt",
