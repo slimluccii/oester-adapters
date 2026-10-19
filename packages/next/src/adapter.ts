@@ -51,6 +51,8 @@ async function onBuildComplete(ctx: BuildContext): Promise<void> {
     htmlHandling: trailingSlash
       ? ("force-trailing-slash" as const)
       : ("drop-trailing-slash" as const),
+    // Next names everything under _next/static by its content or build id.
+    immutable: ["/_next/static/*"],
   };
 
   // A static export is the files Next wrote to its out directory, as they are; public/ is among them already.

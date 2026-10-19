@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { get } from "../../e2e/get.ts";
+import { expectStaticCaching, get } from "../../e2e/get.ts";
 
 async function html(path: string, init?: RequestInit): Promise<string> {
   const response = await get(path, init);
@@ -167,4 +167,8 @@ describe("next.config and public", () => {
   test("a public file", async () => {
     expect(await html("/note.txt")).toBe("pages public file\n");
   });
+});
+
+test("hashed assets are cached for a year, and pages revalidate by their etag", async () => {
+  await expectStaticCaching("/", /\/_next\/static\/[^"\s]+\.js/);
 });
