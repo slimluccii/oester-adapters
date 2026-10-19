@@ -12,10 +12,35 @@ concurrency:
 
 # Only the jobs that publish may request an npm OIDC token; they build nothing and restore no cache.
 jobs:
+  # The packages and examples the changes reach, so verify and e2e skip what nothing touched.
+  affected:
+    runs-on: ubuntu-latest
+    outputs:
+      packages: ${{ steps.affected.outputs.packages }}
+      examples: ${{ steps.affected.outputs.examples }}
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          package-manager-cache: false
+      - id: affected
+        env:
+          BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: node ci/affected.ts "$BASE" >> "$GITHUB_OUTPUT"
+
   verify:
+    needs: affected
     runs-on: ubuntu-latest
     permissions:
       contents: read
+    env:
+      PACKAGES: ${{ needs.affected.outputs.packages }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -30,12 +55,53 @@ jobs:
       - run: pnpm lint
       # A package's types resolve through the dist of the packages it depends on.
       - run: pnpm build
-      - run: pnpm typecheck
-      - run: pnpm test
+      - run: pnpm exec tsc -p ci
+      - if: env.PACKAGES != ''
+        run: |
+          read -ra packages <<<"$PACKAGES"
+          pnpm "${packages[@]/#/--filter=./}" run typecheck
+      - run: |
+          read -ra packages <<<"$PACKAGES"
+          pnpm exec vitest run ci "${packages[@]}"
+
+  e2e:
+    needs: affected
+    if: needs.affected.outputs.examples != ''
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      # The examples run through the preview of the oester repository, its own ingest and loader.
+      - uses: actions/checkout@v7
+        with:
+          repository: slimluccii/oester
+          token: ${{ secrets.OESTER_REPO_TOKEN }}
+          path: .oester-repo
+          persist-credentials: false
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      - run: pnpm install --frozen-lockfile
+      - env:
+          EXAMPLES: ${{ needs.affected.outputs.examples }}
+          OESTER_REPO: .oester-repo
+        run: |
+          read -ra examples <<<"$EXAMPLES"
+          pnpm e2e "${examples[@]}"
 
   select-mode:
-    if: github.event_name == 'push'
-    needs: verify
+    if: >-
+      github.event_name == 'push' && !cancelled() && needs.verify.result == 'success' &&
+      contains(fromJSON('["success", "skipped"]'), needs.e2e.result)
+    needs: [verify, e2e]
     runs-on: ubuntu-latest
     outputs:
       mode: ${{ steps.select-mode.outputs.mode }}
@@ -128,6 +194,8 @@ jobs:
     if: needs.select-mode.outputs.mode == 'version'
     needs: select-mode
     runs-on: ubuntu-latest
+    outputs:
+      packed: ${{ steps.pack.outputs.packed }}
     permissions:
       contents: read
     steps:
@@ -142,14 +210,24 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm changeset version --snapshot dev
       - run: pnpm build
-      - run: pnpm --filter "./packages/**" pack --pack-destination dev-packages
-      - uses: actions/upload-artifact@v7
+      # Only the packages the snapshot gave a dev version; the others are already on npm unchanged.
+      - id: pack
+        run: |
+          for dir in packages/*; do
+            case "$(node -p "require('./$dir/package.json').version")" in
+              *-dev-*) pnpm --dir "$dir" pack --pack-destination "$PWD/dev-packages" ;;
+            esac
+          done
+          if ls dev-packages/*.tgz >/dev/null 2>&1; then echo "packed=true" >> "$GITHUB_OUTPUT"; fi
+      - if: steps.pack.outputs.packed == 'true'
+        uses: actions/upload-artifact@v7
         with:
           name: dev-packages
           path: dev-packages
 
   dev:
     needs: dev-pack
+    if: needs.dev-pack.outputs.packed == 'true'
     runs-on: ubuntu-latest
     environment: npm
     permissions:
