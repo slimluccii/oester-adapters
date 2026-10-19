@@ -8,7 +8,7 @@ Framework adapters published as `@oester/*`, each writing the Oester build outpu
 - `packages/<framework>/`: one adapter each, written against the framework's own adapter API.
 - `examples/<framework>-<shape>/`: sites of different shapes, each with an `oester.test.ts` of HTTP checks.
 - `e2e/`: the runner (`run.ts`) and request helpers (`get.ts`).
-- `ci/affected.ts`: which packages and examples a change reaches; CI verifies, e2e-tests and dev-publishes only those.
+- `ci/affected.ts`: which packages and examples a change reaches; CI verifies and dev-publishes only those; e2e runs locally only, since it needs the private oester repository.
 
 ## Commands
 

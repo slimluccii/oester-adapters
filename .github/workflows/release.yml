@@ -12,12 +12,11 @@ concurrency:
 
 # Only the jobs that publish may request an npm OIDC token; they build nothing and restore no cache.
 jobs:
-  # The packages and examples the changes reach, so verify and e2e skip what nothing touched.
+  # The packages the changes reach, so verify skips what nothing touched.
   affected:
     runs-on: ubuntu-latest
     outputs:
       packages: ${{ steps.affected.outputs.packages }}
-      examples: ${{ steps.affected.outputs.examples }}
     permissions:
       contents: read
     steps:
@@ -64,44 +63,9 @@ jobs:
           read -ra packages <<<"$PACKAGES"
           pnpm exec vitest run ci "${packages[@]}"
 
-  e2e:
-    needs: affected
-    if: needs.affected.outputs.examples != ''
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-    steps:
-      - uses: actions/checkout@v7
-        with:
-          persist-credentials: false
-      # The examples run through the preview of the oester repository, its own ingest and loader.
-      - uses: actions/checkout@v7
-        with:
-          repository: slimluccii/oester
-          token: ${{ secrets.OESTER_REPO_TOKEN }}
-          path: .oester-repo
-          persist-credentials: false
-      - uses: pnpm/action-setup@v6
-      - uses: actions/setup-node@v7
-        with:
-          node-version-file: .nvmrc
-          cache: pnpm
-      - uses: denoland/setup-deno@v2
-        with:
-          deno-version: v2.x
-      - run: pnpm install --frozen-lockfile
-      - env:
-          EXAMPLES: ${{ needs.affected.outputs.examples }}
-          OESTER_REPO: .oester-repo
-        run: |
-          read -ra examples <<<"$EXAMPLES"
-          pnpm e2e "${examples[@]}"
-
   select-mode:
-    if: >-
-      github.event_name == 'push' && !cancelled() && needs.verify.result == 'success' &&
-      contains(fromJSON('["success", "skipped"]'), needs.e2e.result)
-    needs: [verify, e2e]
+    if: github.event_name == 'push'
+    needs: verify
     runs-on: ubuntu-latest
     outputs:
       mode: ${{ steps.select-mode.outputs.mode }}
