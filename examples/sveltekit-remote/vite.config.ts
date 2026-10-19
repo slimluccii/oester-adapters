@@ -1,4 +1,4 @@
-import oester from "@oester/sveltekit";
+import oester from "@oester/svelte";
 import { sveltekit } from "@sveltejs/kit/vite";
 import { defineConfig } from "vite";
 

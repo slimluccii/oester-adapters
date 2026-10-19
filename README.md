@@ -7,7 +7,7 @@ Framework adapters that write the [Oester build output](https://github.com/sliml
 | `@oester/astro`        | Astro                                                                         |
 | `@oester/nitro`        | Nuxt and other Nitro apps                                                     |
 | `@oester/next`         | Next.js                                                                       |
-| `@oester/sveltekit`    | SvelteKit                                                                     |
+| `@oester/svelte`       | SvelteKit                                                                     |
 | `@oester/wald`         | WaldJS                                                                        |
 | `@oester/build-output` | What the adapters share: the manifest, the static files and the server bundle |
 

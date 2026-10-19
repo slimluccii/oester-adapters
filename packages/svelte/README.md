@@ -1,16 +1,16 @@
-# @oester/sveltekit
+# @oester/svelte
 
 SvelteKit adapter for [Oester](https://oester.fr). It writes the [Oester build output](https://github.com/slimluccii/oester/blob/main/docs/build-output.md) to `.oester/output`.
 
 ## Usage
 
 ```sh
-npm install --save-dev @oester/sveltekit
+npm install --save-dev @oester/svelte
 ```
 
 ```js
 // vite.config.js
-import oester from "@oester/sveltekit";
+import oester from "@oester/svelte";
 import { sveltekit } from "@sveltejs/kit/vite";
 import { defineConfig } from "vite";
 
@@ -37,7 +37,7 @@ The deployment's variables reach `$app/env/private`, `$app/env/public` and the d
 
 ```ts
 // src/app.d.ts
-import type { Platform as OesterPlatform } from "@oester/sveltekit";
+import type { Platform as OesterPlatform } from "@oester/svelte";
 
 declare global {
   namespace App {

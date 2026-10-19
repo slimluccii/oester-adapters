@@ -1,4 +1,4 @@
-import type { Platform as OesterPlatform } from "@oester/sveltekit";
+import type { Platform as OesterPlatform } from "@oester/svelte";
 
 declare global {
   namespace App {

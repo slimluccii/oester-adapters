@@ -13,7 +13,7 @@ const handler = fileURLToPath(new URL("./handler.js", import.meta.url));
 /** Writes the Oester build output to `.oester/output`. */
 export default function oester(): Adapter {
   return {
-    name: "@oester/sveltekit",
+    name: "@oester/svelte",
     async adapt(builder) {
       const tmp = builder.getBuildDirectory("oester");
       const staticDir = join(tmp, "static");

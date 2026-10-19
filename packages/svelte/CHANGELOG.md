@@ -1,4 +1,4 @@
-# @oester/sveltekit
+# @oester/svelte
 
 ## 0.1.0
 
