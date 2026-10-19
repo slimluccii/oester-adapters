@@ -129,6 +129,7 @@ export default function oester(options: Options = {}): AstroIntegration {
           name: "@oester/astro",
           entrypointResolution: "auto",
           serverEntrypoint: runtime("handler"),
+          previewEntrypoint: fileURLToPath(new URL("./preview.js", import.meta.url)),
           adapterFeatures: {
             middlewareMode,
             staticHeaders: true,

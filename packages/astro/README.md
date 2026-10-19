@@ -31,6 +31,7 @@ The adapter needs Astro 7.4 or later.
 - Route caching with `oesterCache()`: `Astro.cache.set()` and `routeRules` cache responses at the edge (`s-maxage`). Oester purges them on every deploy; purging by path or tag is not available.
 - `middlewareMode: "edge"`: `oester({ middlewareMode: "edge" })` runs `src/middleware` before every request but those for built assets, so it can guard and rewrite to prerendered pages too. Astro still runs it while prerendering, where `context.isPrerendered` is true.
 - `Astro.locals.oester` holds `{ env, ctx }`: the deployment's static files (`env.ASSETS`), `ctx.waitUntil()` and `ctx.oester.deploymentId`.
+- `astro preview` serves `.oester/output` as Oester would: the manifest's routes, redirects and headers, `_headers` and `_redirects`, and the server with `process.env` as its variables. It serves over http, so `Astro.url` has `http:` where Oester has `https:`.
 
 ## Limits
 
