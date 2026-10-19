@@ -201,6 +201,13 @@ describe("route handlers", () => {
     expect(redirect.headers.get("location")).toBe(`${origin}/dynamic`);
   });
 
+  test("after() runs once the response is out", async () => {
+    expect(await (await get("/api/after")).json()).toEqual({ scheduled: true });
+    await new Promise((resolve) => setTimeout(resolve, 200));
+    const { ranAfter } = (await (await get("/api/after?read")).json()) as { ranAfter: number };
+    expect(ranAfter).toBeGreaterThan(0);
+  });
+
   test("a metadata route is served", async () => {
     const response = await get("/robots.txt");
     expect(response.status).toBe(200);
