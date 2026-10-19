@@ -44,6 +44,13 @@ describe("static pages", () => {
     expect((await get("/products/hidden")).status).toBe(404);
   });
 
+  test("res.revalidate in an API route regenerates a page in this isolate", async () => {
+    const pattern = /stamp (?:<!-- -->)?(\d+)/;
+    const before = Number(pattern.exec(await html("/stale"))![1]);
+    expect(await (await get("/api/revalidate-stale")).json()).toEqual({ revalidated: true });
+    expect(Number(pattern.exec(await html("/stale"))![1])).toBeGreaterThan(before);
+  });
+
   test("a page with revalidate is regenerated once stale", async () => {
     const pattern = /rendered at (?:<!-- -->)?(\d+)/;
     const first = Number(pattern.exec(await html("/fresh"))![1]);

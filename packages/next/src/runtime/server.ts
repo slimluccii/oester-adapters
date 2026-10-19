@@ -39,6 +39,7 @@ export type Part = () => Promise<{ default: Record<string, FileContent> }>;
 type Env = { ASSETS: { fetch(input: string | Request): Promise<Response> } };
 type Context = { waitUntil(promise: Promise<unknown>): void; oester: { clientAddress?: string } };
 type NodeHandler = (req: unknown, res: NodeResponse, ctx: object) => Promise<unknown>;
+type RevalidateOptions = { urlPath: string; headers: Record<string, string | string[]> };
 type WebHandler = (request: Request, ctx: object) => Promise<Response>;
 
 // Next answers these to tell the router what middleware decided; they are not for the visitor.
@@ -118,7 +119,8 @@ export function createServer(config: ServerConfig, parts: Part[]) {
     );
   }
 
-  type Invocation = { env: Env; ctx: Context };
+  /** One request as the platform handed it over: the visitor's URL, and the deployment's env and context. */
+  type Invocation = { url: URL; env: Env; ctx: Context };
 
   function run(id: string, request: Request, url: string, call: Invocation, status?: number) {
     return config.entries[id]!.runtime === "edge"
@@ -140,11 +142,27 @@ export function createServer(config: ServerConfig, parts: Part[]) {
     } else res.end("This page could not be found");
   }
 
+  // Without the visitor's URL Next builds request URLs as http://localhost.
   function requestMeta(call: Invocation) {
     return {
       relativeProjectDir: ".",
+      initURL: call.url.href,
+      initProtocol: call.url.protocol.slice(0, -1),
+      hostname: call.url.hostname,
       render404: (req: unknown, res: NodeResponse) => render404(req, res, call),
+      revalidate: (options: RevalidateOptions) => revalidate(options, call),
     };
+  }
+
+  /** On-demand revalidation from `res.revalidate`, rendered in this isolate rather than through the network. */
+  async function revalidate({ urlPath, headers }: RevalidateOptions, call: Invocation) {
+    const { basePath } = config;
+    const path =
+      basePath && !urlPath.startsWith(`${basePath}/`) ? `${basePath}${urlPath}` : urlPath;
+    const request = new Request(new URL(path, call.url.origin), { method: "HEAD" });
+    for (const [name, value] of Object.entries(headers))
+      for (const item of Array.isArray(value) ? value : [value]) request.headers.append(name, item);
+    await (await handle(request, call.env, call.ctx)).arrayBuffer();
   }
 
   async function runNode(
@@ -208,90 +226,88 @@ export function createServer(config: ServerConfig, parts: Part[]) {
     return new Response("This page could not be found", { status: 404 });
   }
 
-  return {
-    async fetch(request: Request, env: Env, ctx: Context): Promise<Response> {
-      const call = { env, ctx };
-      const url = new URL(request.url);
-      const { basePath } = config;
-      // Oester sends a path outside the base path to the server only for the not-found page.
-      if (basePath && url.pathname !== basePath && !url.pathname.startsWith(`${basePath}/`))
-        return notFound(request, url, call);
-      let middlewareResponse: Response | undefined;
-      let requestHeaders: Headers = request.headers;
-      const result = await resolveRoutes({
-        url,
-        buildId: config.buildId,
-        basePath: config.basePath,
-        i18n: config.i18n,
-        headers: request.headers,
-        requestBody: request.body ?? new ReadableStream(),
-        pathnames: Object.keys(config.pathnames),
-        routes: config.routing,
-        invokeMiddleware: async ({ url: middlewareUrl, headers }) => {
-          if (!config.middleware) return {};
-          const response = await runMiddleware(
-            new Request(middlewareUrl, {
-              method: request.method,
-              headers,
-              body: request.body ? request.clone().body : null,
-              // @ts-expect-error a streamed body needs half duplex in fetch implementations
-              duplex: "half",
-            }),
-            ctx,
-          );
-          const decision = responseToMiddlewareResult(response, headers, middlewareUrl);
-          if (decision.rewrite) decision.rewrite = onOrigin(decision.rewrite, url);
-          if (decision.redirect) decision.redirect.url = onOrigin(decision.redirect.url, url);
-          requestHeaders = headers;
-          if (decision.bodySent) middlewareResponse = response;
-          return decision;
-        },
-      });
-
-      if (result.middlewareResponded && middlewareResponse)
-        return withHeaders(middlewareResponse, undefined);
-      if (result.redirect) {
-        const headers = new Headers(result.resolvedHeaders);
-        headers.set("location", result.redirect.url.toString().replace(url.origin, ""));
-        return new Response(null, { status: result.redirect.status, headers });
-      }
-      if (result.externalRewrite) {
-        const proxied = await fetch(new Request(result.externalRewrite, request));
-        return withHeaders(proxied, result.resolvedHeaders);
-      }
-      if (!result.resolvedPathname && result.status && result.resolvedHeaders?.has("location"))
-        return new Response(null, { status: result.status, headers: result.resolvedHeaders });
-
-      const target = result.resolvedPathname
-        ? config.pathnames[result.resolvedPathname]
-        : undefined;
-      const forwarded = new Request(request.url, {
-        method: request.method,
-        headers: requestHeaders,
-        body: request.body,
-        // @ts-expect-error a streamed body needs half duplex in fetch implementations
-        duplex: "half",
-      });
-      if (target && "file" in target) {
-        const asset = await env.ASSETS.fetch(result.resolvedPathname!);
-        return withHeaders(asset, result.resolvedHeaders);
-      }
-      if (target) {
-        const invocation = result.invocationTarget!;
-        const query = new URLSearchParams();
-        for (const [key, value] of Object.entries(invocation.query))
-          for (const item of Array.isArray(value) ? value : [value]) query.append(key, item);
-        const search = query.size ? `?${query}` : "";
-        const response = await run(
-          target.entry,
-          forwarded,
-          `${invocation.pathname}${search}`,
-          call,
-          result.status,
+  async function handle(request: Request, env: Env, ctx: Context): Promise<Response> {
+    const url = new URL(request.url);
+    const call = { url, env, ctx };
+    const { basePath } = config;
+    // Oester sends a path outside the base path to the server only for the not-found page.
+    if (basePath && url.pathname !== basePath && !url.pathname.startsWith(`${basePath}/`))
+      return notFound(request, url, call);
+    let middlewareResponse: Response | undefined;
+    let requestHeaders: Headers = request.headers;
+    const result = await resolveRoutes({
+      url,
+      buildId: config.buildId,
+      basePath: config.basePath,
+      i18n: config.i18n,
+      headers: request.headers,
+      requestBody: request.body ?? new ReadableStream(),
+      pathnames: Object.keys(config.pathnames),
+      routes: config.routing,
+      invokeMiddleware: async ({ url: middlewareUrl, headers }) => {
+        if (!config.middleware) return {};
+        const response = await runMiddleware(
+          new Request(middlewareUrl, {
+            method: request.method,
+            headers,
+            body: request.body ? request.clone().body : null,
+            // @ts-expect-error a streamed body needs half duplex in fetch implementations
+            duplex: "half",
+          }),
+          ctx,
         );
-        return withHeaders(response, result.resolvedHeaders);
-      }
-      return withHeaders(await notFound(forwarded, url, call), result.resolvedHeaders);
-    },
-  };
+        const decision = responseToMiddlewareResult(response, headers, middlewareUrl);
+        if (decision.rewrite) decision.rewrite = onOrigin(decision.rewrite, url);
+        if (decision.redirect) decision.redirect.url = onOrigin(decision.redirect.url, url);
+        requestHeaders = headers;
+        if (decision.bodySent) middlewareResponse = response;
+        return decision;
+      },
+    });
+
+    if (result.middlewareResponded && middlewareResponse)
+      return withHeaders(middlewareResponse, undefined);
+    if (result.redirect) {
+      const headers = new Headers(result.resolvedHeaders);
+      headers.set("location", result.redirect.url.toString().replace(url.origin, ""));
+      return new Response(null, { status: result.redirect.status, headers });
+    }
+    if (result.externalRewrite) {
+      const proxied = await fetch(new Request(result.externalRewrite, request));
+      return withHeaders(proxied, result.resolvedHeaders);
+    }
+    if (!result.resolvedPathname && result.status && result.resolvedHeaders?.has("location"))
+      return new Response(null, { status: result.status, headers: result.resolvedHeaders });
+
+    const target = result.resolvedPathname ? config.pathnames[result.resolvedPathname] : undefined;
+    const forwarded = new Request(request.url, {
+      method: request.method,
+      headers: requestHeaders,
+      body: request.body,
+      // @ts-expect-error a streamed body needs half duplex in fetch implementations
+      duplex: "half",
+    });
+    if (target && "file" in target) {
+      const asset = await env.ASSETS.fetch(result.resolvedPathname!);
+      return withHeaders(asset, result.resolvedHeaders);
+    }
+    if (target) {
+      const invocation = result.invocationTarget!;
+      const query = new URLSearchParams();
+      for (const [key, value] of Object.entries(invocation.query))
+        for (const item of Array.isArray(value) ? value : [value]) query.append(key, item);
+      const search = query.size ? `?${query}` : "";
+      const response = await run(
+        target.entry,
+        forwarded,
+        `${invocation.pathname}${search}`,
+        call,
+        result.status,
+      );
+      return withHeaders(response, result.resolvedHeaders);
+    }
+    return withHeaders(await notFound(forwarded, url, call), result.resolvedHeaders);
+  }
+
+  return { fetch: handle };
 }

@@ -185,6 +185,22 @@ describe("route handlers", () => {
     expect([...bytes.slice(1, 4)].map((b) => String.fromCharCode(b)).join("")).toBe("PNG");
   });
 
+  test("the request URL is the visitor's, with https and their host", async () => {
+    // Next names a loopback address localhost in the URLs it builds, as under next start.
+    const host = new URL(process.env.OESTER_URL!).host.replace(
+      /^(127\.0\.0\.1|\[::1\])/,
+      "localhost",
+    );
+    const origin = `https://${host}`;
+    expect(await (await get("/api/url?x=1")).json()).toEqual({
+      url: `${origin}/api/url?x=1`,
+      nextUrl: `${origin}/api/url?x=1`,
+    });
+    const redirect = await get("/api/url-redirect");
+    expect(redirect.status).toBe(307);
+    expect(redirect.headers.get("location")).toBe(`${origin}/dynamic`);
+  });
+
   test("a metadata route is served", async () => {
     const response = await get("/robots.txt");
     expect(response.status).toBe(200);
