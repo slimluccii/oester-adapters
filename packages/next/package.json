@@ -32,7 +32,7 @@
   },
   "dependencies": {
     "@next/routing": "16.4.2",
-    "@oester/build-output": "workspace:*",
+    "@oester/build-output": "workspace:^",
     "esbuild": "0.28.2"
   },
   "peerDependencies": {

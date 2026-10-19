@@ -657,7 +657,7 @@ importers:
         specifier: 16.4.2
         version: 16.4.2
       '@oester/build-output':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../build-output
       esbuild:
         specifier: 0.28.2
@@ -686,7 +686,7 @@ importers:
   packages/sveltekit:
     dependencies:
       '@oester/build-output':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../build-output
     devDependencies:
       '@sveltejs/kit':
@@ -705,7 +705,7 @@ importers:
   packages/tanstack-start:
     dependencies:
       '@oester/build-output':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../build-output
       '@tanstack/react-start':
         specifier: '>=1.169.0'
@@ -721,7 +721,7 @@ importers:
   packages/wald:
     dependencies:
       '@oester/build-output':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../build-output
     devDependencies:
       '@waldjs/cli':

@@ -31,7 +31,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@oester/build-output": "workspace:*"
+    "@oester/build-output": "workspace:^"
   },
   "peerDependencies": {
     "@tanstack/react-start": ">=1.169.0",

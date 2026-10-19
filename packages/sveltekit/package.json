@@ -37,7 +37,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@oester/build-output": "workspace:*"
+    "@oester/build-output": "workspace:^"
   },
   "peerDependencies": {
     "@sveltejs/kit": "^3.0.0"

@@ -36,7 +36,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@oester/build-output": "workspace:*"
+    "@oester/build-output": "workspace:^"
   },
   "peerDependencies": {
     "@waldjs/cli": ">=0.13.0"
