@@ -1,5 +1,6 @@
 {
   "name": "@oester/nitro",
+  "private": true,
   "description": "Nitro preset that writes the Oester build output, for Nuxt and other Nitro apps",
   "version": "0.1.0",
   "license": "MIT",

@@ -210,11 +210,11 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm changeset version --snapshot dev
       - run: pnpm build
-      # Only the packages the snapshot gave a dev version; the others are already on npm unchanged.
+      # Only the public packages the snapshot gave a dev version; the others are already on npm unchanged.
       - id: pack
         run: |
           for dir in packages/*; do
-            case "$(node -p "require('./$dir/package.json').version")" in
+            case "$(node -p "const p = require('./$dir/package.json'); p.private ? '' : p.version")" in
               *-dev-*) pnpm --dir "$dir" pack --pack-destination "$PWD/dev-packages" ;;
             esac
           done

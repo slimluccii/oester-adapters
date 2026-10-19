@@ -1,5 +1,6 @@
 {
   "name": "@oester/next",
+  "private": true,
   "description": "Runs Next.js on Oester",
   "version": "0.1.0",
   "license": "MIT",
