@@ -59,6 +59,26 @@ describe("bundleServer", () => {
     expect(await readFile(join(outDir, "index.mjs"), "utf8")).not.toMatch(/globalThis\.fetch/);
   });
 
+  test("a .wasm import gives a WebAssembly.Module, as on workerd, with the bytes inside the bundle", async () => {
+    const root = await sources({
+      "entry.mjs": `import eager from "./eager.wasm";\nexport const modules = async () => [eager, (await import("engine/onig.wasm")).default];\n`,
+      "node_modules/engine/package.json": JSON.stringify({
+        name: "engine",
+        exports: { "./onig.wasm": "./onig.wasm" },
+      }),
+    });
+    const empty = new Uint8Array([0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00]);
+    await writeFile(join(root, "eager.wasm"), empty);
+    await writeFile(join(root, "node_modules/engine/onig.wasm"), empty);
+    const outDir = join(root, "out");
+    await bundleServer({ entry: join(root, "entry.mjs"), outDir });
+    expect((await readdir(outDir, { recursive: true })).some((f) => f.endsWith(".wasm"))).toBe(
+      false,
+    );
+    const { modules } = await import(join(outDir, "index.mjs"));
+    for (const module of await modules()) expect(module).toBeInstanceOf(WebAssembly.Module);
+  });
+
   test("a builtin the edge does not have fails the build, naming it and who imports it", async () => {
     const root = await sources({
       "entry.mjs": `import { readFileSync } from "node:fs";\nexport default { fetch: () => new Response(readFileSync("x")) };\n`,

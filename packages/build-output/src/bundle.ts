@@ -1,4 +1,4 @@
-import { mkdir, rm, writeFile } from "node:fs/promises";
+import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 import { build, type Plugin } from "esbuild";
 import { nodeBuiltins } from "./contract.ts";
@@ -86,6 +86,25 @@ function builtins(alias: Record<string, string>): Plugin {
   };
 }
 
+// Packages with a workerd export import .wasm as a compiled module; server/ holds only ES modules, so the bytes go inside.
+const wasm: Plugin = {
+  name: "oester-wasm",
+  setup(build) {
+    build.onLoad({ filter: /\.wasm$/, namespace: "file" }, (args) => ({
+      contents: `import bytes from ${JSON.stringify(`${args.path}?bytes`)}; export default new WebAssembly.Module(bytes);`,
+      loader: "js",
+    }));
+    build.onResolve({ filter: /\.wasm\?bytes$/ }, (args) => ({
+      path: args.path.slice(0, -"?bytes".length),
+      namespace: "oester-wasm-bytes",
+    }));
+    build.onLoad({ filter: /.*/, namespace: "oester-wasm-bytes" }, async (args) => ({
+      contents: await readFile(args.path),
+      loader: "binary",
+    }));
+  },
+};
+
 /**
  * Bundles a server entry into `index.mjs` and the chunks it loads with import(), as ES modules that import nothing but
  * each other and the Node builtins Oester provides. Kept import() boundaries let Oester fetch a part only when a request reaches it.
@@ -113,7 +132,7 @@ export async function bundleServer(options: BundleOptions): Promise<{ warnings: 
       ...options.define,
     },
     logLevel: "silent",
-    plugins: [builtins(alias)],
+    plugins: [builtins(alias), wasm],
   }).catch((error: { errors?: { text: string }[]; message: string }) => {
     throw new Error(
       error.errors?.length ? error.errors.map((e) => e.text).join("\n") : error.message,
