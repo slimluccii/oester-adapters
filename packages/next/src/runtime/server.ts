@@ -16,7 +16,6 @@ export type Entry =
 export type ServerConfig = {
   buildId: string;
   basePath: string;
-  i18n?: ResolveRoutesParams["i18n"];
   /** The project's directory in the virtual file system: the working directory of the entries. */
   projectDir: string;
   links: Record<string, string>;
@@ -239,7 +238,6 @@ export function createServer(config: ServerConfig, parts: Part[]) {
       url,
       buildId: config.buildId,
       basePath: config.basePath,
-      i18n: config.i18n,
       headers: request.headers,
       requestBody: request.body ?? new ReadableStream(),
       pathnames: Object.keys(config.pathnames),

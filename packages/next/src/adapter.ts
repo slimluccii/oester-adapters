@@ -1,7 +1,7 @@
 import { copyFile, lstat, mkdir, realpath, rm, writeFile } from "node:fs/promises";
 import { dirname, join, relative, sep } from "node:path";
 import { fileURLToPath } from "node:url";
-import { writeOutput, type Route } from "@oester/build-output";
+import { writeOutput } from "@oester/build-output";
 import type { NextAdapter } from "next";
 import { oesterConfig, type ConfigSubset } from "./config.ts";
 import { groupParts, virtualPath } from "./parts.ts";
@@ -11,6 +11,7 @@ import {
   middlewarePatterns,
   withTrailingSlashes,
 } from "./routing.ts";
+import type { FileContent } from "./runtime/modules.ts";
 import type { Entry, ServerConfig } from "./runtime/server.ts";
 import { filesBelow, isDirectory, isNativeCode, serverFile } from "./server-files.ts";
 import { staticTarget } from "./static-files.ts";
@@ -22,6 +23,7 @@ type Output =
   | Outputs["pagesApi"][number]
   | Outputs["appPages"][number]
   | Outputs["appRoutes"][number];
+type StaticFile = { pathname: string; file: string };
 
 const runtimeEntry = fileURLToPath(new URL("./runtime/server.js", import.meta.url));
 
@@ -31,20 +33,25 @@ function warn(message: string): void {
 
 /** The route-cache directory a prerendered file sits in, holding every variant Next wrote for its route. */
 function routeCacheDirectory(file: string): string | undefined {
-  const match = /^(.*[/\\]route-cache[/\\][^/\\]+[/\\][^/\\]+)[/\\]/.exec(file);
-  return match?.[1];
+  return /^(.*[/\\]route-cache[/\\][^/\\]+[/\\][^/\\]+)[/\\]/.exec(file)?.[1];
 }
 
 async function onBuildComplete(ctx: BuildContext): Promise<void> {
-  const { outputs, routing, config, projectDir, repoRoot, distDir, buildId, nextVersion } = ctx;
+  const { outputs, routing, config, projectDir, distDir, nextVersion } = ctx;
   const basePath = config.basePath ?? "";
   const trailingSlash = Boolean(config.trailingSlash);
   const staging = join(distDir, "oester");
   await rm(staging, { recursive: true, force: true });
   const staticDir = join(staging, "static");
-  const serverDir = join(staging, "server");
-  await mkdir(staticDir, { recursive: true });
-  await mkdir(join(serverDir, "parts"), { recursive: true });
+  const common = {
+    root: projectDir,
+    framework: { name: "next", version: nextVersion },
+    staticDir,
+    base: basePath || undefined,
+    htmlHandling: trailingSlash
+      ? ("force-trailing-slash" as const)
+      : ("drop-trailing-slash" as const),
+  };
 
   // A static export is the files Next wrote to its out directory, as they are; public/ is among them already.
   if (config.output === "export") {
@@ -52,61 +59,119 @@ async function onBuildComplete(ctx: BuildContext): Promise<void> {
       await mkdir(dirname(join(staticDir, file.id)), { recursive: true });
       await copyFile(file.filePath, join(staticDir, file.id));
     }
+    // Without a notFound field Oester answers with 404.html, which the export writes.
     const { warnings } = await writeOutput({
-      root: projectDir,
-      framework: { name: "next", version: nextVersion },
-      staticDir,
-      base: basePath || undefined,
+      ...common,
       routes: [{ match: "/*", type: "static" }],
-      // Without a notFound field Oester answers with 404.html, which the export writes.
-      htmlHandling: trailingSlash ? "force-trailing-slash" : "drop-trailing-slash",
     });
     for (const warning of warnings) warn(warning);
     return;
   }
 
-  const staticFiles: { pathname: string; file: string }[] = [];
-  async function addStatic(pathname: string, filePath: string): Promise<void> {
-    const file = staticTarget(pathname, filePath, basePath, trailingSlash);
+  const server = [...outputs.pages, ...outputs.pagesApi, ...outputs.appPages, ...outputs.appRoutes];
+  const byId = new Map<string, Output>(server.map((output) => [output.id, output]));
+  const staticFiles = await copyStaticFiles(ctx, staticDir, byId);
+  const serverEntry = await writeServer(ctx, join(staging, "server"), server, byId, staticFiles);
+
+  const { redirects, skipped: skippedRedirects } = manifestRedirects(
+    routing.beforeMiddleware,
+    basePath,
+  );
+  for (const source of skippedRedirects)
+    warn(
+      `The redirect from ${source} is answered by the server, so it does not apply to static files`,
+    );
+  const { headers, skipped: skippedHeaders } = manifestHeaders(routing.beforeMiddleware, basePath);
+  for (const rule of skippedHeaders)
+    warn(
+      `The headers of ${rule} apply to server responses only: the manifest cannot carry them for static files`,
+    );
+
+  const { warnings } = await writeOutput({
+    ...common,
+    routes: [
+      { match: "/_next/static/*", type: "static" },
+      { match: "/*", type: "static-or-server" },
+    ],
+    redirects,
+    headers,
+    notFound: { type: "server" },
+    middleware: outputs.middleware
+      ? middlewarePatterns(routing.middlewareMatchers, staticFiles, basePath)
+      : undefined,
+    // @next/routing is bundled by ncc, which reads __dirname when it loads.
+    server: { entry: serverEntry, define: { __dirname: JSON.stringify("/") } },
+  });
+  for (const warning of warnings) warn(warning);
+}
+
+/**
+ * Copies what is served as it is: Next's static files, public/, and Pages Router pages prerendered for good, whose HTML
+ * and data need no server. App Router prerenders are not among them: a client navigation asks for the same path with
+ * an RSC header, which only the server can tell apart.
+ */
+async function copyStaticFiles(
+  { outputs, config, projectDir }: BuildContext,
+  staticDir: string,
+  byId: Map<string, Output>,
+): Promise<StaticFile[]> {
+  const basePath = config.basePath ?? "";
+  const staticFiles: StaticFile[] = [];
+  async function add(pathname: string, filePath: string): Promise<void> {
+    const file = staticTarget(pathname, filePath, basePath, Boolean(config.trailingSlash));
     if (!file) return warn(`${pathname} is outside the base path ${basePath}, so it is not served`);
     await mkdir(dirname(join(staticDir, file)), { recursive: true });
     await copyFile(filePath, join(staticDir, file));
     staticFiles.push({ pathname, file });
   }
-  for (const file of outputs.staticFiles) await addStatic(file.pathname, file.filePath);
+  for (const file of outputs.staticFiles) await add(file.pathname, file.filePath);
   // Next leaves public/ to the platform: its files are served at their path under the base path.
   const publicDir = join(projectDir, "public");
   if (await isDirectory(publicDir))
     for (const file of await filesBelow(publicDir))
-      await addStatic(`${basePath}/${relative(publicDir, file).split(sep).join("/")}`, file);
+      await add(`${basePath}/${relative(publicDir, file).split(sep).join("/")}`, file);
+  for (const prerender of outputs.prerenders) {
+    const parent = byId.get(prerender.parentOutputId);
+    const file = prerender.fallback?.filePath;
+    if (
+      parent &&
+      file &&
+      String(parent.type) === "PAGES" &&
+      prerender.fallback?.initialRevalidate === false
+    )
+      await add(prerender.pathname, file);
+  }
+  return staticFiles;
+}
 
-  const byId = new Map<string, Output>();
-  const server: Output[] = [
-    ...outputs.pages,
-    ...outputs.pagesApi,
-    ...outputs.appPages,
-    ...outputs.appRoutes,
-  ];
-  for (const output of server) byId.set(output.id, output);
+/**
+ * Writes the server: an entry with the routing Next resolved and the entries behind each pathname, and the files the
+ * entries need as a virtual file system, split into parts that load when an entry first runs.
+ */
+async function writeServer(
+  ctx: BuildContext,
+  serverDir: string,
+  server: Output[],
+  byId: Map<string, Output>,
+  staticFiles: StaticFile[],
+): Promise<string> {
+  const { outputs, routing, config, projectDir, repoRoot, buildId } = ctx;
+  const basePath = config.basePath ?? "";
+  const staticPaths = new Set(staticFiles.map((file) => file.pathname));
 
-  // Pages Router pages prerendered for good need no server: their HTML and data are files like any other.
+  // A prerendered page the server answers needs the files Next prerendered for its route.
   const prerenderedFiles = new Map<string, string[]>();
   for (const prerender of outputs.prerenders) {
     const parent = byId.get(prerender.parentOutputId);
     const file = prerender.fallback?.filePath;
-    if (!parent || !file) continue;
-    if (String(parent.type) === "PAGES" && prerender.fallback?.initialRevalidate === false) {
-      await addStatic(prerender.pathname, file);
-      continue;
-    }
-    const list = prerenderedFiles.get(parent.filePath) ?? [];
+    if (!parent || !file || staticPaths.has(prerender.pathname)) continue;
     const directory = routeCacheDirectory(file);
+    const list = prerenderedFiles.get(parent.filePath) ?? [];
     list.push(...(directory ? await filesBelow(directory) : [file]));
     prerenderedFiles.set(parent.filePath, list);
   }
 
   const entries: Record<string, Entry> = {};
-  const pathnames: ServerConfig["pathnames"] = {};
   const filesOf = new Map<string, Set<string>>();
   function addEntry(output: Output | NonNullable<Outputs["middleware"]>): string {
     const id = virtualPath(output.filePath, repoRoot);
@@ -130,39 +195,40 @@ async function onBuildComplete(ctx: BuildContext): Promise<void> {
     } else entries[id] ??= { runtime: "nodejs", id, file: id };
     return id;
   }
+
+  const pathnames: ServerConfig["pathnames"] = {};
   for (const output of server) pathnames[output.pathname] = { entry: addEntry(output) };
-  for (const { pathname } of staticFiles) pathnames[pathname] ??= { file: true };
+  for (const pathname of staticPaths) pathnames[pathname] ??= { file: true };
   // Routing resolves a prerendered path to itself, not to its dynamic route, when the route has no fallback.
   for (const prerender of outputs.prerenders) {
     const parent = byId.get(prerender.parentOutputId);
     if (parent) pathnames[prerender.pathname] ??= pathnames[parent.pathname]!;
   }
-
   const middleware = outputs.middleware && addEntry(outputs.middleware);
 
   const appNotFound = outputs.appPages.find((o) => o.pathname === `${basePath}/_not-found`);
-  const static404 = staticFiles.find((f) => f.pathname === `${basePath}/404`);
   const errorPage = outputs.pages.find((o) => o.pathname === `${basePath}/_error`);
   const notFound: ServerConfig["notFound"] = appNotFound
     ? { entry: virtualPath(appNotFound.filePath, repoRoot) }
-    : static404
-      ? { file: static404.pathname }
+    : staticPaths.has(`${basePath}/404`)
+      ? { file: `${basePath}/404` }
       : errorPage && { entry: virtualPath(errorPage.filePath, repoRoot) };
 
-  // The virtual file system: every traced file once, symbolic links as links, grouped into parts per entry.
+  // Every traced file once, symbolic links as links.
   const links: Record<string, string> = {};
-  const contents = new Map<string, NonNullable<Awaited<ReturnType<typeof serverFile>>>>();
+  const contents = new Map<string, FileContent>();
   const skipped = new Set<string>();
   const virtualFiles: { id: string; files: string[] }[] = [];
   for (const [id, files] of filesOf) {
     const list: string[] = [];
     for (const file of files) {
       const virtual = virtualPath(file, repoRoot);
-      if ((await lstat(file)).isSymbolicLink()) {
+      const stats = await lstat(file);
+      if (stats.isSymbolicLink()) {
         links[virtual] = virtualPath(await realpath(file), repoRoot);
         continue;
       }
-      if ((await lstat(file)).isDirectory()) continue;
+      if (stats.isDirectory()) continue;
       if (!contents.has(virtual)) {
         const content = await serverFile(file, virtual);
         if (content === undefined) {
@@ -181,6 +247,7 @@ async function onBuildComplete(ctx: BuildContext): Promise<void> {
     );
 
   const { parts, partsOf } = groupParts(virtualFiles);
+  await mkdir(join(serverDir, "parts"), { recursive: true });
   for (const [index, part] of parts.entries()) {
     const record = Object.fromEntries(part.map((file) => [file, contents.get(file)]));
     await writeFile(
@@ -192,20 +259,20 @@ async function onBuildComplete(ctx: BuildContext): Promise<void> {
   const serverConfig: ServerConfig = {
     buildId,
     basePath,
-    i18n: (config.i18n ?? undefined) as ServerConfig["i18n"],
     projectDir: virtualPath(projectDir, repoRoot),
     links,
     builtAt: new Date().toISOString(),
     routing: { ...routing, caseSensitive: Boolean(config.experimental?.caseSensitiveRoutes) },
-    pathnames: withTrailingSlashes(pathnames, trailingSlash),
+    pathnames: withTrailingSlashes(pathnames, Boolean(config.trailingSlash)),
     entries,
     middleware,
     notFound,
     partsOf,
   };
   await writeFile(join(serverDir, "config.json"), JSON.stringify(serverConfig));
+  const entry = join(serverDir, "entry.mjs");
   await writeFile(
-    join(serverDir, "entry.mjs"),
+    entry,
     [
       `import { createServer } from ${JSON.stringify(runtimeEntry)};`,
       `import config from "./config.json";`,
@@ -213,42 +280,7 @@ async function onBuildComplete(ctx: BuildContext): Promise<void> {
       "",
     ].join("\n"),
   );
-
-  const { redirects, skipped: skippedRedirects } = manifestRedirects(
-    routing.beforeMiddleware,
-    basePath,
-  );
-  for (const source of skippedRedirects)
-    warn(
-      `The redirect from ${source} is answered by the server, so it does not apply to static files`,
-    );
-  const { headers, skipped: skippedHeaders } = manifestHeaders(routing.beforeMiddleware, basePath);
-  for (const rule of skippedHeaders)
-    warn(
-      `The headers of ${rule} apply to server responses only: the manifest cannot carry them for static files`,
-    );
-
-  const routes: Route[] = [
-    { match: "/_next/static/*", type: "static" },
-    { match: "/*", type: "static-or-server" },
-  ];
-  const { warnings } = await writeOutput({
-    root: projectDir,
-    framework: { name: "next", version: nextVersion },
-    staticDir,
-    base: basePath || undefined,
-    routes,
-    redirects,
-    headers,
-    htmlHandling: trailingSlash ? "force-trailing-slash" : "drop-trailing-slash",
-    notFound: { type: "server" },
-    middleware: outputs.middleware
-      ? middlewarePatterns(routing.middlewareMatchers, staticFiles, basePath)
-      : undefined,
-    // @next/routing is bundled by ncc, which reads __dirname when it loads.
-    server: { entry: join(serverDir, "entry.mjs"), define: { __dirname: JSON.stringify("/") } },
-  });
-  for (const warning of warnings) warn(warning);
+  return entry;
 }
 
 export const adapter: NextAdapter = {
