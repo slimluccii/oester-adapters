@@ -10,7 +10,6 @@ export default defineConfig(
       "**/.astro",
       "**/.nuxt",
       "**/.output",
-      "**/routeTree.gen.ts",
       "**/.svelte-kit",
       "**/.next",
       "**/out",

@@ -8,8 +8,6 @@ dist/
 .output/
 .next/
 .svelte-kit/
-.tanstack/
 .vinxi/
-routeTree.gen.ts
 next-env.d.ts
 out/

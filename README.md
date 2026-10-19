@@ -2,15 +2,14 @@
 
 Framework adapters that write the [Oester build output](https://github.com/slimluccii/oester/blob/main/docs/build-output.md).
 
-| Package                  | Framework                                                                     |
-| ------------------------ | ----------------------------------------------------------------------------- |
-| `@oester/astro`          | Astro                                                                         |
-| `@oester/nitro`          | Nuxt and other Nitro apps                                                     |
-| `@oester/next`           | Next.js                                                                       |
-| `@oester/sveltekit`      | SvelteKit                                                                     |
-| `@oester/tanstack-start` | TanStack Start                                                                |
-| `@oester/wald`           | WaldJS                                                                        |
-| `@oester/build-output`   | What the adapters share: the manifest, the static files and the server bundle |
+| Package                | Framework                                                                     |
+| ---------------------- | ----------------------------------------------------------------------------- |
+| `@oester/astro`        | Astro                                                                         |
+| `@oester/nitro`        | Nuxt and other Nitro apps                                                     |
+| `@oester/next`         | Next.js                                                                       |
+| `@oester/sveltekit`    | SvelteKit                                                                     |
+| `@oester/wald`         | WaldJS                                                                        |
+| `@oester/build-output` | What the adapters share: the manifest, the static files and the server bundle |
 
 ## Development
 
