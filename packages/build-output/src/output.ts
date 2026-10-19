@@ -5,11 +5,10 @@ import {
   compatibilityDate,
   isPattern,
   isRefusedHeader,
+  outputDirectory,
   redirectStatuses,
   type Manifest,
 } from "./contract.ts";
-
-export const outputDirectory = ".oester/output";
 
 export type OutputOptions = Omit<Manifest, "version" | "compatibilityDate" | "server"> & {
   /** The project's root; the output goes to `.oester/output` inside it. */

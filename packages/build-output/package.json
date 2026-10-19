@@ -16,6 +16,11 @@
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
     },
+    "./preview": {
+      "oester-source": "./src/preview/preview.ts",
+      "types": "./dist/preview/preview.d.ts",
+      "default": "./dist/preview/preview.js"
+    },
     "./package.json": "./package.json"
   },
   "files": [

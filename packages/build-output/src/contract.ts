@@ -23,6 +23,9 @@ export type Manifest = {
   server?: { entry: string };
 };
 
+/** Where an adapter writes the build output, relative to the project's root. */
+export const outputDirectory = ".oester/output";
+
 /** The runtime behavior the adapters in this release were written against. */
 export const compatibilityDate = "2026-10-01";
 
