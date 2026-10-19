@@ -134,10 +134,13 @@ export function middlewarePatterns(
       nextAssets = true;
       continue;
     }
-    for (const path of [pathname.slice(basePath.length) || "/", `/${file}`]) {
-      if (!isPattern(path) || path.split("/").some((s) => s.startsWith(":") || s === "*"))
+    const path = pathname.slice(basePath.length) || "/";
+    const paths = [path, ...(file.endsWith("/index.html") ? [`${path}/`] : []), `/${file}`];
+    for (const candidate of paths) {
+      const segments = candidate.split("/");
+      if (!isPattern(candidate) || segments.some((s) => s.startsWith(":") || s === "*"))
         return { include: ["/*"] };
-      include.add(path);
+      include.add(candidate);
     }
   }
   const patterns = [...(nextAssets ? ["/_next/static/*"] : []), ...include];

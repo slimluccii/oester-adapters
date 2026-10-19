@@ -163,10 +163,16 @@ describe("middlewarePatterns", () => {
     expect(
       middlewarePatterns(
         [matcher("^\\/docs\\/pg$")],
-        [file("/docs/pg", "pg/index.html"), file("/docs/_next/static/a.js", "_next/static/a.js")],
+        [file("/docs/pg", "pg.html"), file("/docs/_next/static/a.js", "_next/static/a.js")],
         "/docs",
       ),
-    ).toEqual({ include: ["/pg", "/pg/index.html"] });
+    ).toEqual({ include: ["/pg", "/pg.html"] });
+  });
+
+  test("a page placed for trailing slashes is also covered at the path with the slash", () => {
+    expect(middlewarePatterns([matcher("^/.*$")], [file("/pg", "pg/index.html")], "")).toEqual({
+      include: ["/pg", "/pg/", "/pg/index.html"],
+    });
   });
 
   test("matching ignores case, as Next does by default", () => {
