@@ -63,8 +63,6 @@ export default {
   entry: fileURLToPath(new URL("./runtime/entry.js", import.meta.url)),
   node: false,
   noExternals: true,
-  // Nitro's import() boundaries become parts Oester fetches on first use.
-  inlineDynamicImports: false,
   serveStatic: false,
   minify: true,
   esbuild: { options: { target: "es2024" } },
@@ -84,7 +82,6 @@ export default {
     output: {
       format: "esm",
       exports: "named",
-      inlineDynamicImports: false,
       entryFileNames: "index.mjs",
       chunkFileNames: "chunks/[name]-[hash].mjs",
     },

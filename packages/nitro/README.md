@@ -20,5 +20,6 @@ A Nitro app without Nuxt sets `preset: "@oester/nitro"` in its `nitro.config.ts`
 
 ## Limits
 
+- All server code is one module, warned about above 7 MB and refused above 10 MB, a Bunny script's limit. An `import()` of a name computed at runtime fails when it runs, since only what the build bundled is there.
 - `useStorage` and Nitro's cache have no persistent driver on Oester; use a driver that works over HTTP for data that must last.
 - Route rules with `**` in the middle of a path stay with Nitro and apply only to responses from the server.
