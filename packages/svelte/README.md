@@ -55,6 +55,7 @@ export {};
 
 ## Limits
 
+- All server code is one module, warned about above 7 MB and refused above 10 MB, a Bunny script's limit. An `import()` of a name computed at runtime fails when it runs, since only what the build bundled is there.
 - The server runs on an edge runtime without a file system, sockets or the Node builtins Oester leaves out; a dependency that imports one fails the build with its name.
 - `platform` is undefined during `vite dev` and prerendering; the adapter has no emulator.
 - A site with both `trailingSlash: 'always'` and `'never'` pages gets a warning: Oester serves its prerendered pages with and without the slash.
