@@ -35,6 +35,7 @@ The adapter needs Astro 7.4 or later.
 
 ## Limits
 
+- All server code is one module, warned about above 7 MB and refused above 10 MB, a Bunny script's limit. An `import()` of a name computed at runtime fails when it runs, since only what the build bundled is there.
 - Sharp optimizes images on prerendered pages at build. Pages rendered on request serve images as they are, since Sharp needs native code the edge does not have.
 - Sessions need a driver that works over HTTP or in memory (`sessionDrivers.lruCache()` keeps them per isolate, so only for trying things out). Oester has no file system.
 - `Astro.rewrite()` from a page rendered on request reaches only routes in the server bundle, as in Astro itself. Edge middleware can rewrite to prerendered pages.
