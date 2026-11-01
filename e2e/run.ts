@@ -95,11 +95,23 @@ for (const name of names) {
   }
   const tested = spawnSync(
     "pnpm",
-    ["exec", "vitest", "run", `../examples/${name}/oester.test.ts`],
+    [
+      "exec",
+      "vitest",
+      "run",
+      `../examples/${name}/oester.test.ts`,
+      ...(live ? [] : ["server-output.test.ts"]),
+    ],
     {
       cwd: import.meta.dirname,
       stdio: "inherit",
-      env: { ...process.env, OESTER_URL: url, ...(live ? { OESTER_LIVE: "1" } : {}) },
+      env: {
+        ...process.env,
+        OESTER_URL: url,
+        ...(live
+          ? { OESTER_LIVE: "1" }
+          : { OESTER_OUTPUT: join(examplesDir, name, ".oester/output") }),
+      },
     },
   );
   stop();

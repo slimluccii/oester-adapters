@@ -6,6 +6,7 @@
     "e2e": "node run.ts"
   },
   "devDependencies": {
+    "es-module-lexer": "3.0.4",
     "vitest": "5.0.0"
   }
 }
