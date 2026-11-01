@@ -24,7 +24,7 @@ Instead of `adapterPath`, a platform can set `NEXT_ADAPTER_PATH` to this package
 
 - Static files, `public/` and Pages Router pages prerendered for good are files Oester serves itself.
 - Everything else goes to one server. It resolves routes with `@next/routing`, the resolver Next.js publishes for adapters, and calls the entries Next.js built, as `next start` would.
-- The edge has no file system and no `require()`, so the files Next.js traced for its entries ship as a read-only file system in memory, with a CommonJS loader over it. They are split into parts: a part loads when the first request needs it.
+- The edge has no file system and no `require()`, so the files Next.js traced for its entries ship as a read-only file system in memory, with a CommonJS loader over it. They are split into parts inside the one server module: a part is evaluated when the first request needs it.
 - Each deployment gets a global object of its own, so what Next.js writes to the global object (its manifests and caches, a patched `fetch`, `Date`, `Math.random`, `crypto` and `console`) does not reach other deployments in the same isolate.
 
 ## Supported
@@ -37,6 +37,7 @@ Instead of `adapterPath`, a platform can set `NEXT_ADAPTER_PATH` to this package
 
 ## Limits
 
+- All server code is one module, warned about above 7 MB and refused above 10 MB, a Bunny script's limit. An `import()` of a name computed at runtime fails when it runs, since only what the build bundled is there.
 - **Caching is per isolate.** ISR, `revalidatePath`, `revalidateTag` and `use cache` work in memory, from the prerendered pages on. Isolates do not share them, and a new isolate starts from the build again.
 - **next/image serves images as they are.** The image optimizer needs sharp, which cannot run on the edge; the adapter sets `images.unoptimized` unless `images.loader` or `images.loaderFile` is set.
 - **Native addons are left out**, with a warning. A route that loads one fails when it runs.
